@@ -14,9 +14,6 @@ import "solidity-coverage";
 
 import { task } from 'hardhat/config'
 
-import './tasks/deploy-relay'
-import './tasks/deploy-db'
-
 /*
       📡 This is where you configure your deploy configuration for 🏗 scaffold-eth
 

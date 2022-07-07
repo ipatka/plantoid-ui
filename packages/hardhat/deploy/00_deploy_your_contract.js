@@ -16,10 +16,15 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  const tx = await deploy("SignatureDB", {
+  // const tx = await deploy("Plantoid", {
+  //   from: deployer,
+  //   args: [],
+  //   log: true,
+  //   waitConfirmations: 5,
+  // });
+  const tx2 = await deploy("PlantoidSpawn", {
     from: deployer,
-    args: [
-    ],
+    args: ['0x930626b449eaadc3bb1e92e2f8916f794a4768c1'],
     log: true,
     waitConfirmations: 5,
   });
