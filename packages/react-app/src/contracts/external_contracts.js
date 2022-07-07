@@ -784,118 +784,6 @@ const DAIABI = [
   },
 ];
 
-const SignatureDbABI = [
-  {
-    inputs: [
-      {
-        internalType: "bytes",
-        name: "data",
-        type: "bytes",
-      },
-    ],
-    name: "addData",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "bytes32",
-        name: "dataHash",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes",
-        name: "data",
-        type: "bytes",
-      },
-    ],
-    name: "addData",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "gnosisSafe",
-        type: "address",
-      },
-      {
-        internalType: "bytes32",
-        name: "dataHash",
-        type: "bytes32",
-      },
-      {
-        internalType: "bytes",
-        name: "signatures",
-        type: "bytes",
-      },
-    ],
-    name: "addSignatures",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
-    name: "dataForDataHash",
-    outputs: [
-      {
-        internalType: "bytes",
-        name: "",
-        type: "bytes",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "setSignatureReward",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
-      },
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
-    name: "signaturesForDataHash",
-    outputs: [
-      {
-        internalType: "bytes",
-        name: "",
-        type: "bytes",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-];
-
 const PlantoidSpawnABI = 
   [
     {
@@ -1825,7 +1713,7 @@ module.exports = {
         address: "0xcad372e8d34d4fc7885826f31bfbb8f9bbe0140c",
         abi: PlantoidSpawnABI,
       },
-      palacePlantoid: {
+      plantoid: {
         address: "0xae23b9c34b9b5f294342f2158ebe18c97595acb9",
         abi: PlantoidABI,
       },
