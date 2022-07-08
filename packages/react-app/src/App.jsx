@@ -29,6 +29,7 @@ import {
   EtherInput,
   Events,
   BytesStringInput,
+  Proposals,
 } from "./components";
 import { NETWORKS, ALCHEMY_KEY } from "./constants";
 import externalContracts from "./contracts/external_contracts";
@@ -314,6 +315,7 @@ function App(props) {
   // 🏗 scaffold-eth is full of handy hooks like this one to get your balance:
   const yourLocalBalance = useBalance(localProvider, address);
 
+
   // Just plug in different 🛰 providers to get your balance on different chains:
   const yourMainnetBalance = useBalance(mainnetProvider, address);
 
@@ -347,7 +349,10 @@ function App(props) {
 
   const artist = useContractReader(readContracts, "plantoid", "artist");
 
-  console.log({ artist });
+  const spawnCount = useContractReader(readContracts, "plantoid", "spawnCount");
+  const proposalCount = useContractReader(readContracts, "plantoid", "proposalCounter", [0]);
+
+  console.log({ proposalCount });
 
   /*
   const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
@@ -425,6 +430,8 @@ function App(props) {
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
   const plantoidAddress = "0xae23b9c34b9b5f294342f2158ebe18c97595acb9";
+  const plantoidBalance = useBalance(localProvider, plantoidAddress);
+
 
   const events = useEventListener(readContracts, "plantoid", "Deposit", localProvider, 10983913);
 
@@ -502,6 +509,8 @@ function App(props) {
               />
               <Address address={artist} ensProvider={mainnetProvider} blockExplorer={blockExplorer} fontSize={20} />
               <Divider />
+              Current balance: { plantoidBalance.toString() }
+              <Divider />
               Amount
               <EtherInput
                 price={price}
@@ -519,6 +528,16 @@ function App(props) {
               >
                 Feed
               </Button>
+
+              <Divider />
+              # of Seeds : { spawnCount?.toString() }
+              # of Proposals : { proposalCount?.toString() }
+
+              <Divider />
+
+                {(100000000000000001 > 10000000000000000) && <Proposals plantoidAddress={plantoidAddress} localProvider={userSigner} /> } 
+
+
             </div>
             <div style={{ width: 600, margin: "auto", marginTop: 32, paddingBottom: 32 }}>
               <h2>Events:</h2>
