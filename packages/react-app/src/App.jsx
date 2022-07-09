@@ -47,7 +47,9 @@ import { ZERO_ADDRESS } from "./components/Swap";
 
 import { safeSignTypedData, encodeMultiSend, MetaTransaction } from "@gnosis.pm/safe-contracts";
 
-const { ethers } = require("ethers");
+const { ethers, BigNumber } = require("ethers");
+
+
 /*
     Welcome to 🏗 scaffold-eth !
 
@@ -68,7 +70,7 @@ const { ethers } = require("ethers");
 */
 
 /// 📡 What chain are your contracts deployed to?
-const initialNetwork = NETWORKS.rinkeby; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
+const initialNetwork = NETWORKS.localhost; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
 const DEBUG = true;
@@ -111,6 +113,9 @@ function App(props) {
   const [txHash, setTxHash] = useState();
   const [tipValue, setTipValue] = useState();
   const [selectedNetwork, setSelectedNetwork] = useState(networkOptions[0]);
+
+
+
   const location = useLocation();
 
   const addTx = async () => {
@@ -350,9 +355,47 @@ function App(props) {
   const artist = useContractReader(readContracts, "plantoid", "artist");
 
   const spawnCount = useContractReader(readContracts, "plantoid", "spawnCount");
-  const proposalCount = useContractReader(readContracts, "plantoid", "proposalCounter", [0]);
+  const loggedCount = useContractReader(readContracts, "plantoid", "proposalCounter", [0]);
+
+  const tokenIDs = useContractReader(readContracts, "plantoid", "_tokenIds");
+  console.log("NUMBER OF IDss---------- " + tokenIDs)
+
+  const [proposalCount, setProposalCount] = useState(0);
+
+  useEffect(() => {
+    if(loggedCount) {
+      let num = Number(loggedCount);
+      console.log(proposalCount, 'count set')
+      setProposalCount(num)
+      console.log(proposalCount, 'count set2')
+      
+    }
+  },[loggedCount])
+
+  const [proposalsList, setProposalsList] = useState([[0,"",""]]);
+
+
+  useEffect(() => {
+    async function getProposals() {  
+        console.log(proposalCount, 'COUNT!')
+        console.log("PROP 0 ==== " + proposalsList[0])
+        let tempPropsList = [[0,"",""]];
+      for (var i = 1; i <= proposalCount; i++) {
+        let tempProp = await readContracts.plantoid.proposals(0, i);
+        tempPropsList.push([i, tempProp[0], tempProp[1]]);
+      }
+      setProposalsList(tempPropsList)
+    }
+    getProposals();
+  }, [proposalCount]);
 
   console.log({ proposalCount });
+
+  
+
+  
+
+
 
   /*
   const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
@@ -429,7 +472,7 @@ function App(props) {
 
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
-  const plantoidAddress = "0xae23b9c34b9b5f294342f2158ebe18c97595acb9";
+  const plantoidAddress = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
   const plantoidBalance = useBalance(localProvider, plantoidAddress);
 
 
@@ -534,8 +577,8 @@ function App(props) {
               # of Proposals : { proposalCount?.toString() }
 
               <Divider />
-
-                {(100000000000000001 > 10000000000000000) && <Proposals plantoidAddress={plantoidAddress} localProvider={userSigner} /> } 
+                  {console.log(proposalsList, 'list check')}
+                {(100000000000000001 > 10000000000000000) && <Proposals plantoidAddress={plantoidAddress} localProvider={userSigner} proposalsList={proposalsList} proposalCount={proposalCount} /> } 
 
 
             </div>

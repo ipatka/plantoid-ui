@@ -1,7 +1,7 @@
 import React from "react";
 import {useState} from 'react';
 
-import { Button, Input } from "antd";
+import { Button, Input, Divider } from "antd";
 
 import PlantoidABI from "../contracts/plantoid";
 
@@ -12,7 +12,7 @@ const { ethers } = require("ethers");
 
 
 
-export default function Proposals( { plantoidAddress, localProvider } ) {
+export default function Proposals( { plantoidAddress, localProvider, proposalsList, proposalCount } ) {
 
     const [message, setMessage] = useState('');
 
@@ -24,17 +24,38 @@ export default function Proposals( { plantoidAddress, localProvider } ) {
     return (
 
         <div>
-        <Input onChange={handleChange} value="hELLO"></Input>
+        <Input onChange={handleChange} ></Input>
 
             
 
             <Button
                 onClick={() => {
-                    console.log(plantoidAddress);
-                  submitProposal(plantoidAddress, localProvider, "msg");
+                    // prosposalsList ? console.log("proposal 0 -------> " + proposalsList[0]) : null;
+                    console.log(plantoidAddress);  console.log(message, )
+                  submitProposal(plantoidAddress, localProvider, message);
                 }}
                
             > Submit Proposal</Button> 
+
+
+            <Divider />
+
+            {(proposalsList) ?  
+                <div>{proposalsList.map(prop => {
+
+                   // if (prop[0] == 0) { return(<div/>) }
+                  //  else { 
+                        return (
+                       <div>
+                            {`${prop[0]}, ${prop[1].substring(0,7)}..., ${prop[2]}`}
+                            <Button onClick={() => { console.log("voting on prop" + prop[0])}}>vote</Button>
+                        </div> 
+                    )
+                //}
+                })}</div> : null
+                
+            } 
+
 
         </div>
     )
