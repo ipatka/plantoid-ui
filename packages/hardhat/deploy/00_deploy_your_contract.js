@@ -2,7 +2,16 @@
 
 const { ethers } = require("hardhat");
 
-const localChainId = "31337";
+const getNewPlantoidAddress = async (tx) => {
+  const receipt = await ethers.provider.getTransactionReceipt(tx.hash);
+  let plantoidSummonAbi = [
+    "event PlantoidSpawned(address indexed plantoid, address indexed artist)",
+  ];
+  let iface = new ethers.utils.Interface(plantoidSummonAbi);
+  let log = iface.parseLog(receipt.logs[0]);
+  const { plantoid } = log.args;
+  return plantoid;
+};
 
 // const sleep = (ms) =>
 //   new Promise((r) =>
@@ -12,22 +21,55 @@ const localChainId = "31337";
 //     }, ms)
 //   );
 
+const config = {
+  plantoidOracleAddress: "0x775aF9b7c214Fe8792aB5f5da61a8708591d517E",
+  artistAddress: "0x775aF9b7c214Fe8792aB5f5da61a8708591d517E",
+  threshold: ethers.utils.parseEther("1"),
+  name: "Plantoid",
+  prereveal: "preveal",
+  symbol: "LIFE",
+  votingPeriod: 1000,
+  gracePeriod: 500,
+  settlePeriod: 300,
+  extPeriod: 200,
+};
+
 module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  // const tx = await deploy("Plantoid", {
-  //   from: deployer,
-  //   args: [],
-  //   log: true,
-  //   waitConfirmations: 5,
-  // });
+  const tx = await deploy("Plantoid", {
+    from: deployer,
+    args: [],
+    log: true,
+    waitConfirmations: 0,
+  });
+  console.log({ tx });
   const tx2 = await deploy("PlantoidSpawn", {
     from: deployer,
-    args: ['0x930626b449eaadc3bb1e92e2f8916f794a4768c1'],
+    args: [tx.receipt.contractAddress],
     log: true,
-    waitConfirmations: 5,
+    waitConfirmations: 0,
   });
+  const plantoidSpawn = await ethers.getContractAt(
+    "PlantoidSpawn",
+    tx2.receipt.contractAddress
+  ); //<-- if you want to instantiate a version of a contract at a specific address!
+  const tx3 = await plantoidSpawn.spawnPlantoid(
+    config.plantoidOracleAddress,
+    config.artistAddress,
+    config.threshold,
+    [
+      config.votingPeriod,
+      config.gracePeriod,
+      config.settlePeriod,
+      config.extPeriod,
+    ],
+    config.name,
+    config.symbol,
+    config.prereveal
+  );
+  const address = await getNewPlantoidAddress(tx3);
   // const tx = await deploy("TipRelayer", {
   //   from: deployer,
   //   args: [
@@ -36,7 +78,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   //   waitConfirmations: 5,
   // });
 
-  console.log({ tx });
+  console.log({ address });
   /*  await YourContract.setPurpose("Hello");
   
     To take ownership of yourContract using the ownable library uncomment next line and add the 

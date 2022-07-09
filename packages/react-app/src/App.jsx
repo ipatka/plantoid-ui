@@ -472,10 +472,10 @@ function App(props) {
       />
       <Menu style={{ textAlign: "center", marginTop: 20 }} selectedKeys={[location.pathname]} mode="horizontal">
         <Menu.Item key="/">
-          <Link to="/">Tx Builder</Link>
+          <Link to="/">Feed</Link>
         </Menu.Item>
-        <Menu.Item key="/sign">
-          <Link to="/sign">Sign</Link>
+        <Menu.Item key="/claim">
+          <Link to="/claim">Claim</Link>
         </Menu.Item>
       </Menu>
 
@@ -539,7 +539,7 @@ function App(props) {
             </div>
           </div>
         </Route>
-        <Route exact path="/sign">
+        <Route exact path="/claim">
           {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
           <div>
             <div style={{ border: "1px solid #cccccc", padding: 16, width: 400, margin: "auto", marginTop: 64 }}>
