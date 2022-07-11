@@ -82,7 +82,6 @@ const web3Modal = Web3ModalSetup();
 
 // 🛰 providers
 const providers = [
-  "https://eth-mainnet.gateway.pokt.network/v1/lb/611156b4a585a20035148406",
   `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
   "https://rpc.scaffoldeth.io:48544",
 ];
@@ -353,6 +352,8 @@ function App(props) {
   const purpose = useContractReader(readContracts, "YourContract", "purpose");
 
   const artist = useContractReader(readContracts, "plantoid", "artist");
+  
+  console.log({artist})
 
   const spawnCount = useContractReader(readContracts, "plantoid", "spawnCount");
   const loggedCount = useContractReader(readContracts, "plantoid", "proposalCounter", [0]);
@@ -472,7 +473,7 @@ function App(props) {
 
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
-  const plantoidAddress = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
+  const plantoidAddress = '0xCafac3dD18aC6c6e92c921884f9E4176737C052c'
   const plantoidBalance = useBalance(localProvider, plantoidAddress);
 
 

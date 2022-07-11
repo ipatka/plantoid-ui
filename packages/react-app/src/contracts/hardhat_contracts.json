@@ -3231,7 +3231,7 @@
       "chainId": "31337",
       "contracts": {
         "Plantoid": {
-          "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+          "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
           "abi": [
             {
               "inputs": [],
@@ -3246,16 +3246,6 @@
             {
               "inputs": [],
               "name": "AlreadyVoted",
-              "type": "error"
-            },
-            {
-              "inputs": [],
-              "name": "AlreadyVoting",
-              "type": "error"
-            },
-            {
-              "inputs": [],
-              "name": "FailedToSendETH",
               "type": "error"
             },
             {
@@ -3281,6 +3271,11 @@
             {
               "inputs": [],
               "name": "NotInVoting",
+              "type": "error"
+            },
+            {
+              "inputs": [],
+              "name": "NotMinted",
               "type": "error"
             },
             {
@@ -3393,6 +3388,68 @@
               "inputs": [
                 {
                   "indexed": false,
+                  "internalType": "uint256",
+                  "name": "round",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "address",
+                  "name": "spawner",
+                  "type": "address"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "address",
+                  "name": "newPlantoid",
+                  "type": "address"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "address",
+                  "name": "fundDestination",
+                  "type": "address"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "string",
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "string",
+                  "name": "symbol",
+                  "type": "string"
+                }
+              ],
+              "name": "NewSpawn",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
+                  "internalType": "address",
+                  "name": "settler",
+                  "type": "address"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "proposal",
+                  "type": "uint256"
+                }
+              ],
+              "name": "ProposalAccepted",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
                   "internalType": "address",
                   "name": "proposer",
                   "type": "address"
@@ -3411,6 +3468,37 @@
                 }
               ],
               "name": "ProposalSubmitted",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "round",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "address",
+                  "name": "settler",
+                  "type": "address"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "proposal",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "end",
+                  "type": "uint256"
+                }
+              ],
+              "name": "ProposalVetoed",
               "type": "event"
             },
             {
@@ -3439,6 +3527,50 @@
               "type": "event"
             },
             {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
+                  "internalType": "address",
+                  "name": "voter",
+                  "type": "address"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "round",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "choice",
+                  "type": "uint256"
+                }
+              ],
+              "name": "Voted",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "round",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "end",
+                  "type": "uint256"
+                }
+              ],
+              "name": "VotingStarted",
+              "type": "event"
+            },
+            {
               "inputs": [
                 {
                   "internalType": "address",
@@ -3461,7 +3593,7 @@
               "name": "artist",
               "outputs": [
                 {
-                  "internalType": "address",
+                  "internalType": "address payable",
                   "name": "",
                   "type": "address"
                 }
@@ -3496,6 +3628,19 @@
                   "internalType": "string",
                   "name": "",
                   "type": "string"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "depositThreshold",
+              "outputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "",
+                  "type": "uint256"
                 }
               ],
               "stateMutability": "view",
@@ -3541,14 +3686,19 @@
                   "type": "address"
                 },
                 {
-                  "internalType": "address",
+                  "internalType": "address payable",
                   "name": "_artist",
                   "type": "address"
                 },
                 {
-                  "internalType": "uint256",
-                  "name": "_threshold",
-                  "type": "uint256"
+                  "internalType": "address payable",
+                  "name": "_parent",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256[2]",
+                  "name": "_thresholds",
+                  "type": "uint256[2]"
                 },
                 {
                   "internalType": "uint256[4]",
@@ -3644,6 +3794,19 @@
               "outputs": [
                 {
                   "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "parent",
+              "outputs": [
+                {
+                  "internalType": "address payable",
                   "name": "",
                   "type": "address"
                 }
@@ -3909,9 +4072,14 @@
                   "type": "address"
                 },
                 {
-                  "internalType": "uint256",
-                  "name": "_plantoidThreshold",
-                  "type": "uint256"
+                  "internalType": "address payable",
+                  "name": "_fundDestination",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256[2]",
+                  "name": "_thresholds",
+                  "type": "uint256[2]"
                 },
                 {
                   "internalType": "uint256[4]",
@@ -3957,9 +4125,14 @@
                   "type": "address"
                 },
                 {
-                  "internalType": "uint256",
-                  "name": "_plantoidThreshold",
-                  "type": "uint256"
+                  "internalType": "address payable",
+                  "name": "_fundDestination",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256[2]",
+                  "name": "_thresholds",
+                  "type": "uint256[2]"
                 },
                 {
                   "internalType": "uint256[4]",
@@ -4271,7 +4444,7 @@
           ]
         },
         "PlantoidSpawn": {
-          "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+          "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
           "abi": [
             {
               "inputs": [
@@ -4311,14 +4484,19 @@
                   "type": "address"
                 },
                 {
-                  "internalType": "address",
+                  "internalType": "address payable",
                   "name": "_artist",
                   "type": "address"
                 },
                 {
-                  "internalType": "uint256",
-                  "name": "_threshold",
-                  "type": "uint256"
+                  "internalType": "address payable",
+                  "name": "_parent",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256[2]",
+                  "name": "_thresholds",
+                  "type": "uint256[2]"
                 },
                 {
                   "internalType": "uint256[4]",
@@ -4347,6 +4525,11 @@
                   "internalType": "bool",
                   "name": "",
                   "type": "bool"
+                },
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
                 }
               ],
               "stateMutability": "nonpayable",

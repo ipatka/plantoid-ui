@@ -1,26 +1,27 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.0;
+pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
-import "hardhat/console.sol";
+import {SafeTransferLib} from "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
 
 interface IPlantoidSpawner {
     function spawnPlantoid(
         address,
-        address,
-        uint256,
+        address payable,
+        address payable,
+        uint256[2] memory,
         uint256[4] memory,
         string memory,
         string memory,
         string memory
-    ) external returns (bool);
+    ) external returns (bool, address);
 }
 error StillVoting();
 error NotInVoting();
 error AlreadyVoting();
+error NotMinted();
 error NotOwner();
 error AlreadyRevealed();
 error InvalidProposal();
@@ -39,6 +40,7 @@ error FailedToSpawn();
 ///
 ///
 contract Plantoid is ERC721Enumerable, Initializable {
+    using SafeTransferLib for address payable;
     using ECDSA for bytes32; /*ECDSA for signature recovery for license mints*/
 
     event Deposit(uint256 amount, address sender, uint256 indexed tokenId);
@@ -46,6 +48,23 @@ contract Plantoid is ERC721Enumerable, Initializable {
         address proposer,
         string proposalUri,
         uint256 proposalId
+    );
+    event VotingStarted(uint256 round, uint256 end);
+    event Voted(address voter, uint256 round, uint256 choice);
+    event ProposalVetoed(
+        uint256 round,
+        address settler,
+        uint256 proposal,
+        uint256 end
+    );
+    event ProposalAccepted(address settler, uint256 proposal);
+    event NewSpawn(
+        uint256 round,
+        address spawner,
+        address newPlantoid,
+        address fundDestination,
+        string name,
+        string symbol
     );
 
     /* 
@@ -67,6 +86,7 @@ contract Plantoid is ERC721Enumerable, Initializable {
     Reproduction state mgmt
     *****************/
     uint256 public threshold; /*Threshold of received ETH to trigger a spawning round*/
+    uint256 public depositThreshold; /*Threshold of received ETH to trigger an NFT to mint*/
 
     mapping(uint256 => uint256) public votingEnd; /*Voting round => time when voting ends*/
     uint256 public escrow; /*ETH locked until voting is concluded*/
@@ -80,7 +100,8 @@ contract Plantoid is ERC721Enumerable, Initializable {
     mapping(uint256 => mapping(uint256 => uint256)) public votes; /* spawn count => proposal Id => votes*/
 
     uint256 public round; /* Track active voting round*/
-    address public artist; /* Store artist for this plantoid*/
+    address payable public parent; /* Parent plantoid contract*/
+    address payable public artist; /* Store artist for this plantoid*/
 
     uint256 votingPeriod; /*Time during which holders can vote for active proposals*/
     uint256 votingExt; /*How long to extend a vote if the winner is vetoed*/
@@ -121,8 +142,9 @@ contract Plantoid is ERC721Enumerable, Initializable {
     /// @param symbol_ Token symbol for supporter seeds
     function init(
         address _plantoid,
-        address _artist,
-        uint256 _threshold,
+        address payable _artist,
+        address payable _parent,
+        uint256[2] memory _thresholds,
         uint256[4] calldata _periods,
         string calldata name_,
         string calldata symbol_,
@@ -130,7 +152,9 @@ contract Plantoid is ERC721Enumerable, Initializable {
     ) external initializer {
         plantoidAddress = _plantoid;
         artist = _artist;
-        threshold = _threshold;
+        parent = _parent;
+        depositThreshold = _thresholds[0];
+        threshold = _thresholds[1];
         _name = name_;
         _symbol = symbol_;
         votingPeriod = _periods[0];
@@ -178,8 +202,7 @@ contract Plantoid is ERC721Enumerable, Initializable {
     function maxVotes(uint256 _round) public view returns (uint256 _maxVotes) {
         // Proposal IDs start at 1
         for (uint256 _i = 1; _i <= proposalCounter[_round]; _i++) {
-            if (votes[_round][_i] > _maxVotes)
-                _maxVotes = votes[_round][_i]; // Detect max amount of votes received in a round
+            if (votes[_round][_i] > _maxVotes) _maxVotes = votes[_round][_i]; // Detect max amount of votes received in a round
         }
     }
 
@@ -189,8 +212,8 @@ contract Plantoid is ERC721Enumerable, Initializable {
         if ((address(this).balance - escrow) < threshold)
             revert ThresholdNotReached();
         escrow += threshold; /*Mark portion of balance as escrow so threshold resets*/
-        if (votingEnd[round] != 0) revert AlreadyVoting(); /* Don't allow voting to be initiated multiple times */
         votingEnd[round] = block.timestamp + votingPeriod; /*Allow voting until now + period*/
+        emit VotingStarted(round, votingEnd[round]);
 
         round++; /*Increment round*/
     }
@@ -241,6 +264,7 @@ contract Plantoid is ERC721Enumerable, Initializable {
             voted[_round][_votingTokenIds[index]] = _proposal; /*Mark votes per token*/
         }
         votes[_round][_proposal] += _votingTokenIds.length; /*Increment total votes for a proposal*/
+        emit Voted(msg.sender, _round, _proposal);
     }
 
     /// @notice Accept winner by the artist, or veto the winner and extend the voting period
@@ -259,88 +283,128 @@ contract Plantoid is ERC721Enumerable, Initializable {
             (msg.sender != artist) &&
             ((votingEnd[_round] + settlePeriod) < block.timestamp)
         ) revert NotArtist(); /*Only artist can settle, unless settle period has passed*/
+        if ((msg.sender != artist) && _veto) revert NotArtist(); /*Only artist can veto*/
         if (proposals[_round][_winningProposal].proposer == address(0))
             revert InvalidProposal(); /*Revert if proposal is blank*/
         if (votes[_round][_winningProposal] != maxVotes(_round))
             revert NotWinner(); /*Allow artist to select a tiebreaker*/
         /*If proposal is vetoed, extend voting period and allow people to vote for a different proposal*/
         if (_veto) {
-            votingEnd[_round] += votingExt;
+            votingEnd[_round] = block.timestamp + votingExt;
             proposals[_round][_winningProposal].vetoed = true;
             votes[_round][_winningProposal] = 0;
+            emit ProposalVetoed(
+                _round,
+                msg.sender,
+                _winningProposal,
+                votingEnd[_round]
+            );
         } else {
             winningProposal[_round] = _winningProposal; /*If not vetoed, mark winner*/
+            emit ProposalAccepted(msg.sender, _winningProposal);
         }
     }
 
     /// @dev Spawn new plantoid by winning artist
     /// @param _round Settled round
     /// @param _newPlantoid address of new plantoid oracle
-    /// @param _plantoidThreshold deposit threshold for new plantoid
     /// @param _plantoidName token name of new plantoid
     /// @param _plantoidSymbol token symbol
     function spawn(
         uint256 _round,
         address _newPlantoid,
-        uint256 _plantoidThreshold,
+        address payable _fundDestination,
+        uint256[2] memory _thresholds,
         uint256[4] memory _periods,
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
     ) external {
-        if (proposals[_round][winningProposal[_round]].proposer != msg.sender)
-            revert NotWinner();
-        escrow -= threshold; /*Reduce escrow balance*/
-        (bool _success, ) = artist.call{value: threshold}(""); /*Send ETH to artist first*/
-        // todo royalties
-        if (!_success) revert FailedToSendETH();
-        if (
-            !spawner.spawnPlantoid(
-                _newPlantoid,
-                msg.sender,
-                _plantoidThreshold,
-                _periods,
-                _plantoidName,
-                _plantoidSymbol,
-                _prerevealUri
-            )
-        ) revert FailedToSpawn();
+        _spawn(
+            _round,
+            spawner,
+            _newPlantoid,
+            _fundDestination,
+            _thresholds,
+            _periods,
+            _plantoidName,
+            _plantoidSymbol,
+            _prerevealUri
+        );
     }
 
     /// @dev Spawn new plantoid using custom contract by winning artist
     /// @param _round Settled round
     /// @param _newPlantoidSpawner address of new plantoid spawner
     /// @param _newPlantoid address of new plantoid oracle
-    /// @param _plantoidThreshold deposit threshold for new plantoid
     /// @param _plantoidName token name of new plantoid
     /// @param _plantoidSymbol token symbol
     function spawnCustom(
         uint256 _round,
         IPlantoidSpawner _newPlantoidSpawner,
         address _newPlantoid,
-        uint256 _plantoidThreshold,
+        address payable _fundDestination,
+        uint256[2] memory _thresholds,
         uint256[4] memory _periods,
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
     ) external {
+        _spawn(
+            _round,
+            _newPlantoidSpawner,
+            _newPlantoid,
+            _fundDestination,
+            _thresholds,
+            _periods,
+            _plantoidName,
+            _plantoidSymbol,
+            _prerevealUri
+        );
+    }
+
+    /// @dev Spawn new plantoid by winning artist
+    /// @param _round Settled round
+    /// @param _newPlantoid address of new plantoid oracle
+    /// @param _plantoidName token name of new plantoid
+    /// @param _plantoidSymbol token symbol
+    function _spawn(
+        uint256 _round,
+        IPlantoidSpawner _spawner,
+        address _newPlantoid,
+        address payable _fundDestination,
+        uint256[2] memory _thresholds,
+        uint256[4] memory _periods,
+        string memory _plantoidName,
+        string memory _plantoidSymbol,
+        string memory _prerevealUri
+    ) internal {
         if (proposals[_round][winningProposal[_round]].proposer != msg.sender)
             revert NotWinner();
-        escrow -= threshold;
-        (bool _success, ) = artist.call{value: threshold}(""); /*Send ETH to artist first*/
-        // todo royalties
-        if (!_success) revert FailedToSendETH();
-        if (
-            !_newPlantoidSpawner.spawnPlantoid(
-                _newPlantoid,
-                msg.sender,
-                _plantoidThreshold,
-                _periods,
-                _plantoidName,
-                _plantoidSymbol,
-                _prerevealUri
-            )
-        ) revert FailedToSpawn();
+        escrow -= threshold; /*Reduce escrow balance*/
+        uint256 _toParentOrArtist = (threshold * 10) / 100;
+        artist.safeTransferETH(_toParentOrArtist);
+        if (parent != address(0)) parent.safeTransferETH(_toParentOrArtist);
+        _fundDestination.safeTransferETH(threshold - (2 * _toParentOrArtist));
+        (bool _success, address _plantoid) = _spawner.spawnPlantoid(
+            _newPlantoid,
+            payable(msg.sender),
+            payable(address(this)),
+            _thresholds,
+            _periods,
+            _plantoidName,
+            _plantoidSymbol,
+            _prerevealUri
+        );
+        if (!_success) revert FailedToSpawn();
+        emit NewSpawn(
+            _round,
+            address(_spawner),
+            _plantoid,
+            _fundDestination,
+            _plantoidName,
+            _plantoidSymbol
+        );
     }
 
     /*****************
@@ -351,10 +415,12 @@ contract Plantoid is ERC721Enumerable, Initializable {
             plantoidAddress != address(0xdead),
             "Cannot send ETH to dead plantoid"
         );
+
+        if (msg.value < depositThreshold) revert ThresholdNotReached();
         _tokenIds += 1;
 
         emit Deposit(msg.value, msg.sender, _tokenIds);
-        _safeMint(msg.sender, _tokenIds); /*Mint unrevealed token to sender*/
+        _mint(msg.sender, _tokenIds); /*Mint unrevealed token to sender*/
     }
 
     /// @dev Reveal NFT content for a supporter NFT
@@ -366,6 +432,9 @@ contract Plantoid is ERC721Enumerable, Initializable {
         string memory _tokenUri,
         bytes memory _signature
     ) external {
+        if (!_exists(_tokenId)) {
+            revert NotMinted();
+        }
         if (revealed[_tokenId]) revert AlreadyRevealed();
         bytes32 _digest = keccak256(
             abi.encodePacked(_tokenId, _tokenUri, address(this))
@@ -428,25 +497,26 @@ contract PlantoidSpawn is CloneFactory, IPlantoidSpawner {
     // add a generic data bytes field so people can make new templates
     function spawnPlantoid(
         address _plantoidAddr,
-        address _artist,
-        uint256 _threshold,
+        address payable _artist,
+        address payable _parent,
+        uint256[2] memory _thresholds,
         uint256[4] calldata _periods,
         string memory _name,
         string memory _symbol,
         string memory _prerevealUri
-    ) external override returns (bool) {
+    ) external override returns (bool, address) {
         Plantoid _plantoid = Plantoid(createClone(template));
         _plantoid.init(
             _plantoidAddr,
             _artist,
-            _threshold,
+            _parent,
+            _thresholds,
             _periods,
             _name,
             _symbol,
             _prerevealUri
         );
         emit PlantoidSpawned(address(_plantoid), _artist);
-        return true;
+        return (true, address(_plantoid));
     }
 }
-

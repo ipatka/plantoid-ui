@@ -20,10 +20,13 @@ const getNewPlantoidAddress = async (tx) => {
 //       r();
 //     }, ms)
 //   );
+const zeroAddress = "0x0000000000000000000000000000000000000000";
 
 const config = {
   plantoidOracleAddress: "0x775aF9b7c214Fe8792aB5f5da61a8708591d517E",
   artistAddress: "0x775aF9b7c214Fe8792aB5f5da61a8708591d517E",
+  parentAddress: zeroAddress,
+  depositThreshold: ethers.utils.parseEther("0.0001"),
   threshold: ethers.utils.parseEther("1"),
   name: "Plantoid",
   prereveal: "preveal",
@@ -58,7 +61,8 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const tx3 = await plantoidSpawn.spawnPlantoid(
     config.plantoidOracleAddress,
     config.artistAddress,
-    config.threshold,
+    config.parentAddress,
+    [config.depositThreshold, config.threshold],
     [
       config.votingPeriod,
       config.gracePeriod,
@@ -69,7 +73,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     config.symbol,
     config.prereveal
   );
-  const address = await getNewPlantoidAddress(tx3);
+  const plantoidAddress = await getNewPlantoidAddress(tx3);
   // const tx = await deploy("TipRelayer", {
   //   from: deployer,
   //   args: [
@@ -78,7 +82,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   //   waitConfirmations: 5,
   // });
 
-  console.log({ address });
+  console.log({ plantoidAddress });
   /*  await YourContract.setPurpose("Hello");
   
     To take ownership of yourContract using the ownable library uncomment next line and add the 
