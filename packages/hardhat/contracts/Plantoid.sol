@@ -44,13 +44,15 @@ contract Plantoid is ERC721Enumerable, Initializable {
     using ECDSA for bytes32; /*ECDSA for signature recovery for license mints*/
 
     event Deposit(uint256 amount, address sender, uint256 indexed tokenId);
+    event Revealed(uint256 tokenId, string uri);
     event ProposalSubmitted(
         address proposer,
         string proposalUri,
+        uint256 round,
         uint256 proposalId
     );
     event VotingStarted(uint256 round, uint256 end);
-    event Voted(address voter, uint256 round, uint256 choice);
+    event Voted(address voter, uint256 tokenId, uint256 round, uint256 choice);
     event ProposalVetoed(
         uint256 round,
         address settler,
@@ -234,6 +236,7 @@ contract Plantoid is ERC721Enumerable, Initializable {
         emit ProposalSubmitted(
             msg.sender,
             _proposalUri,
+            _round,
             proposalCounter[_round]
         );
     }
@@ -262,9 +265,9 @@ contract Plantoid is ERC721Enumerable, Initializable {
             ) revert AlreadyVoted(); /*Revert if already voted and not vetoed*/
 
             voted[_round][_votingTokenIds[index]] = _proposal; /*Mark votes per token*/
+            emit Voted(msg.sender, _votingTokenIds[index], _round, _proposal);
         }
         votes[_round][_proposal] += _votingTokenIds.length; /*Increment total votes for a proposal*/
-        emit Voted(msg.sender, _round, _proposal);
     }
 
     /// @notice Accept winner by the artist, or veto the winner and extend the voting period
@@ -444,6 +447,8 @@ contract Plantoid is ERC721Enumerable, Initializable {
 
         _tokenUris[_tokenId] = _tokenUri;
         revealed[_tokenId] = true;
+
+        emit Revealed(_tokenId, _tokenUri);
     }
 
     /*****************
