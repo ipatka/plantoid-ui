@@ -1,25 +1,47 @@
 specVersion: 0.0.2
 schema:
   file: ./src/schema.graphql
-dataSources:
-  - kind: ethereum/contract
-    name: YourContract
+templates:
+  - name: Plantoid
+    kind: ethereum/contract
     network: localhost
     source:
-      address: "{{localhost_YourContractAddress}}"
-      abi: YourContract
-      startBlock: 1
+      abi: Plantoid
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.5
       language: wasm/assemblyscript
-      entities:
-        - Purpose
-        - Sender
-      abis:
-        - name: YourContract
-          file: ./abis/localhost_YourContract.json
-      eventHandlers:
-        - event: SetPurpose(address,string)
-          handler: handleSetPurpose
       file: ./src/mapping.ts
+      entities:
+        - Seed
+        - Holder
+        - Proposal
+        - Vote
+      abis:
+        - name: Plantoid
+          file: ./abis/localhost_Plantoid.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,indexed uint256) 
+          handler: handleSeedTransfer
+        - event: ProposalSubmitted(address,string,uint256,uint256) 
+          handler: handleProposalSubmitted
+dataSources:
+  - kind: ethereum/contract
+    name: PlantoidSpawn
+    network: localhost
+    source:
+      address: "{{localhost_PlantoidSpawnAddress}}"
+      abi: PlantoidSpawn
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/mapping.ts
+      entities:
+        - Spawner
+      abis:
+        - name: PlantoidSpawn
+          file: ./abis/localhost_PlantoidSpawn.json
+      eventHandlers:
+        - event: PlantoidSpawned(indexed address,indexed address)
+          handler: handleNewPlantoid

@@ -500,7 +500,7 @@ function App(props) {
 
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
-  const plantoidAddress = '0xbf9fBFf01664500A33080Da5d437028b07DFcC55'
+  const plantoidAddress = '0x9f1ac54BEF0DD2f6f3462EA0fa94fC62300d3a8e'
   const plantoidBalance = useBalance(localProvider, plantoidAddress);
 
 
