@@ -75,7 +75,7 @@ const initialNetwork = NETWORKS.localhost; // <------- select your target fronte
 // 😬 Sorry for all the console logging
 const DEBUG = true;
 const NETWORKCHECK = true;
-const USE_BURNER_WALLET = false; // toggle burner wallet feature
+const USE_BURNER_WALLET = true; // toggle burner wallet feature
 const USE_NETWORK_SELECTOR = false;
 
 const web3Modal = Web3ModalSetup();
@@ -500,7 +500,7 @@ function App(props) {
 
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
-  const plantoidAddress = '0xE451980132E65465d0a498c53f0b5227326Dd73F'
+  const plantoidAddress = '0x9f1ac54BEF0DD2f6f3462EA0fa94fC62300d3a8e'
   const plantoidBalance = useBalance(localProvider, plantoidAddress);
 
 
@@ -624,7 +624,7 @@ function App(props) {
 
 
               {round ?
-                <Proposals plantoidAddress={plantoidAddress} localProvider={localProvider} user={address} proposalsList={proposalsList} proposalCount={proposalCount} round={round} tokens={tokens} />
+                <Proposals plantoidAddress={plantoidAddress} userSigner={userSigner} user={address} proposalsList={proposalsList} proposalCount={proposalCount} round={round} tokens={tokens} />
                 : <br></br>}
 
 

@@ -2008,7 +2008,7 @@ module.exports = {
   31337: {
     contracts: {
       plantoid: {
-        address: "0xE451980132E65465d0a498c53f0b5227326Dd73F",
+        address: "0x9f1ac54BEF0DD2f6f3462EA0fa94fC62300d3a8e",
         abi: PlantoidABI,
       },
     },

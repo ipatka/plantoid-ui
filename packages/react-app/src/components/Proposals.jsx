@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Button, Input, Divider } from "antd";
 
 import PlantoidABI from "../contracts/plantoid";
-import { useBurnerSigner } from "eth-hooks";
 import plantoid from "../contracts/plantoid";
 
 const { ethers } = require("ethers");
@@ -15,7 +14,7 @@ const {parse, stringify} = require('flatted/cjs');
 
 
 
-export default function Proposals({ plantoidAddress, localProvider, user, proposalsList, proposalCount, round, tokens, totTokens }) {
+export default function Proposals({ plantoidAddress, userSigner, user, proposalsList, proposalCount, round, tokens, totTokens }) {
 
     const [message, setMessage] = useState('');
 
@@ -43,7 +42,7 @@ export default function Proposals({ plantoidAddress, localProvider, user, propos
                 onClick={() => {
                     // prosposalsList ? console.log("proposal 0 -------> " + proposalsList[0]) : null;
                     console.log(plantoidAddress); console.log(message,)
-                    submitProposal(plantoidAddress, localProvider, message);
+                    submitProposal(plantoidAddress, userSigner, message);
                 }}
 
             > Submit Proposal</Button>
@@ -62,7 +61,7 @@ export default function Proposals({ plantoidAddress, localProvider, user, propos
                                 -- votes: { tokens[user] / totTokens} %
                                 <Button
                                     onClick={ async () => {
-                                        submitVote(plantoidAddress, localProvider, prop);
+                                        submitVote(plantoidAddress, userSigner, prop);
                                     }}>vote</Button>
                             </div>
                         )
@@ -77,10 +76,10 @@ export default function Proposals({ plantoidAddress, localProvider, user, propos
 }
 
 
-const submitProposal = async (plantoidAddress, localProvider, msg) => {
+const submitProposal = async (plantoidAddress, userSigner, msg) => {
     try {
 
-        const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, localProvider.getSigner());
+        const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, userSigner);
         await plantoid.submitProposal(0, msg);
     } catch (error) {
         console.log({ error });
@@ -88,17 +87,19 @@ const submitProposal = async (plantoidAddress, localProvider, msg) => {
 };
 
 
-const submitVote = async (plantoidAddress, localProvider, prop) => {
+const submitVote = async (plantoidAddress, userSigner, prop) => {
 
     console.log("voting on prop " + prop[0]);
-    console.log('localprovider = ' + stringify(localProvider.getSigner()));
+    console.log('userSigner = ' + stringify(userSigner));
 
     try {
 
-        const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, localProvider.getSigner());
+        const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, userSigner);
         //const votokens = Array.from({length: tokens[user] || 1}, (_, i) => i + 1) ;
         //console.log({votokens, prop});
-        await plantoid.submitVote(0, prop[0], [1,2,3,4]);
+        const votes = await plantoid.votes(0, 1)
+        console.log({votes})
+        await plantoid.submitVote(0, prop[0], [1]);
 
         console.log("hereeeeee")
 
