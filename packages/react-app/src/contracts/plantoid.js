@@ -1,8 +1,79 @@
 module.exports = [
+
   {
     inputs: [],
     stateMutability: "nonpayable",
     type: "constructor",
+  },
+  {
+    inputs: [],
+    name: "AlreadyRevealed",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "AlreadyVoted",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "FailedToSpawn",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "InvalidProposal",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NoVotingTokens",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NotArtist",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NotInVoting",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NotMinted",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NotOwner",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NotWinner",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "StillVoting",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "ThresholdNotReached",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "URIQueryForNonexistentToken",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "Vetoed",
+    type: "error",
   },
   {
     anonymous: false,
@@ -72,11 +143,73 @@ module.exports = [
       {
         indexed: true,
         internalType: "uint256",
-        name: "depositIndex",
+        name: "tokenId",
         type: "uint256",
       },
     ],
     name: "Deposit",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "round",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "spawner",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "newPlantoid",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "fundDestination",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "name",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "symbol",
+        type: "string",
+      },
+    ],
+    name: "NewSpawn",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "address",
+        name: "settler",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "proposal",
+        type: "uint256",
+      },
+    ],
+    name: "ProposalAccepted",
     type: "event",
   },
   {
@@ -94,8 +227,45 @@ module.exports = [
         name: "proposalUri",
         type: "string",
       },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "proposalId",
+        type: "uint256",
+      },
     ],
     name: "ProposalSubmitted",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "round",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "settler",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "proposal",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "end",
+        type: "uint256",
+      },
+    ],
+    name: "ProposalVetoed",
     type: "event",
   },
   {
@@ -124,22 +294,48 @@ module.exports = [
     type: "event",
   },
   {
+    anonymous: false,
     inputs: [
       {
+        indexed: false,
+        internalType: "address",
+        name: "voter",
+        type: "address",
+      },
+      {
+        indexed: false,
         internalType: "uint256",
-        name: "_round",
+        name: "round",
         type: "uint256",
       },
       {
+        indexed: false,
         internalType: "uint256",
-        name: "_winningProposal",
+        name: "choice",
         type: "uint256",
       },
     ],
-    name: "acceptWinner",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
+    name: "Voted",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "round",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "end",
+        type: "uint256",
+      },
+    ],
+    name: "VotingStarted",
+    type: "event",
   },
   {
     inputs: [
@@ -164,7 +360,7 @@ module.exports = [
     name: "artist",
     outputs: [
       {
-        internalType: "address",
+        internalType: "address payable",
         name: "",
         type: "address",
       },
@@ -206,7 +402,20 @@ module.exports = [
   },
   {
     inputs: [],
-    name: "depositIndex",
+    name: "depositThreshold",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "escrow",
     outputs: [
       {
         internalType: "uint256",
@@ -244,14 +453,24 @@ module.exports = [
         type: "address",
       },
       {
-        internalType: "address",
+        internalType: "address payable",
         name: "_artist",
         type: "address",
       },
       {
-        internalType: "uint256",
-        name: "_threshold",
-        type: "uint256",
+        internalType: "address payable",
+        name: "_parent",
+        type: "address",
+      },
+      {
+        internalType: "uint256[2]",
+        name: "_thresholds",
+        type: "uint256[2]",
+      },
+      {
+        internalType: "uint256[4]",
+        name: "_periods",
+        type: "uint256[4]",
       },
       {
         internalType: "string",
@@ -261,6 +480,11 @@ module.exports = [
       {
         internalType: "string",
         name: "symbol_",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "_prerevealUri",
         type: "string",
       },
     ],
@@ -297,28 +521,19 @@ module.exports = [
     inputs: [
       {
         internalType: "uint256",
-        name: "_nonce",
+        name: "_round",
         type: "uint256",
       },
+    ],
+    name: "maxVotes",
+    outputs: [
       {
-        internalType: "address",
-        name: "_recipient",
-        type: "address",
-      },
-      {
-        internalType: "string",
-        name: "_tokenUri",
-        type: "string",
-      },
-      {
-        internalType: "bytes",
-        name: "_signature",
-        type: "bytes",
+        internalType: "uint256",
+        name: "_maxVotes",
+        type: "uint256",
       },
     ],
-    name: "mintSeed",
-    outputs: [],
-    stateMutability: "nonpayable",
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -355,12 +570,38 @@ module.exports = [
   },
   {
     inputs: [],
+    name: "parent",
+    outputs: [
+      {
+        internalType: "address payable",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "plantoidAddress",
     outputs: [
       {
         internalType: "address",
         name: "",
         type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "prerevealUri",
+    outputs: [
+      {
+        internalType: "string",
+        name: "",
+        type: "string",
       },
     ],
     stateMutability: "view",
@@ -409,6 +650,66 @@ module.exports = [
         internalType: "string",
         name: "proposalUri",
         type: "string",
+      },
+      {
+        internalType: "bool",
+        name: "vetoed",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_tokenId",
+        type: "uint256",
+      },
+      {
+        internalType: "string",
+        name: "_tokenUri",
+        type: "string",
+      },
+      {
+        internalType: "bytes",
+        name: "_signature",
+        type: "bytes",
+      },
+    ],
+    name: "revealContent",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "revealed",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "round",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -486,6 +787,29 @@ module.exports = [
   {
     inputs: [
       {
+        internalType: "uint256",
+        name: "_round",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_winningProposal",
+        type: "uint256",
+      },
+      {
+        internalType: "bool",
+        name: "_veto",
+        type: "bool",
+      },
+    ],
+    name: "settle",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "bytes32",
         name: "",
         type: "bytes32",
@@ -505,14 +829,29 @@ module.exports = [
   {
     inputs: [
       {
+        internalType: "uint256",
+        name: "_round",
+        type: "uint256",
+      },
+      {
         internalType: "address",
         name: "_newPlantoid",
         type: "address",
       },
       {
-        internalType: "uint256",
-        name: "_plantoidThreshold",
-        type: "uint256",
+        internalType: "address payable",
+        name: "_fundDestination",
+        type: "address",
+      },
+      {
+        internalType: "uint256[2]",
+        name: "_thresholds",
+        type: "uint256[2]",
+      },
+      {
+        internalType: "uint256[4]",
+        name: "_periods",
+        type: "uint256[4]",
       },
       {
         internalType: "string",
@@ -524,6 +863,11 @@ module.exports = [
         name: "_plantoidSymbol",
         type: "string",
       },
+      {
+        internalType: "string",
+        name: "_prerevealUri",
+        type: "string",
+      },
     ],
     name: "spawn",
     outputs: [],
@@ -531,20 +875,12 @@ module.exports = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "spawnCount",
-    outputs: [
+    inputs: [
       {
         internalType: "uint256",
-        name: "",
+        name: "_round",
         type: "uint256",
       },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
       {
         internalType: "contract IPlantoidSpawner",
         name: "_newPlantoidSpawner",
@@ -556,9 +892,19 @@ module.exports = [
         type: "address",
       },
       {
-        internalType: "uint256",
-        name: "_plantoidThreshold",
-        type: "uint256",
+        internalType: "address payable",
+        name: "_fundDestination",
+        type: "address",
+      },
+      {
+        internalType: "uint256[2]",
+        name: "_thresholds",
+        type: "uint256[2]",
+      },
+      {
+        internalType: "uint256[4]",
+        name: "_periods",
+        type: "uint256[4]",
       },
       {
         internalType: "string",
@@ -570,8 +916,20 @@ module.exports = [
         name: "_plantoidSymbol",
         type: "string",
       },
+      {
+        internalType: "string",
+        name: "_prerevealUri",
+        type: "string",
+      },
     ],
     name: "spawnCustom",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "startVoting",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -644,6 +1002,19 @@ module.exports = [
         internalType: "string",
         name: "",
         type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "threshold",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -763,9 +1134,9 @@ module.exports = [
     name: "voted",
     outputs: [
       {
-        internalType: "bool",
+        internalType: "uint256",
         name: "",
-        type: "bool",
+        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -785,6 +1156,25 @@ module.exports = [
       },
     ],
     name: "votes",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "votingEnd",
     outputs: [
       {
         internalType: "uint256",

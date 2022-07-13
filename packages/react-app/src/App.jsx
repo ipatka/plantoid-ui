@@ -169,9 +169,33 @@ function App(props) {
     }
   };
 
+
+  const [tokens, setTokens] = useState({});
+  const [totTokens, setTotTokens] = useState(3);
+
+
   const feedPlantoid = async plantoidAddress => {
     try {
       await userSigner.sendTransaction({ to: plantoidAddress, value: ethers.utils.parseEther(txValue) });
+    } catch (error) {
+      console.log({ error });
+    }
+    const newTokens = { ...tokens }
+    newTokens[address] = newTokens[address] ? newTokens[address] += 1 : 1
+    setTokens(newTokens);
+
+    //setTotTokens(totTokens + 1);
+
+    console.log("tokens for " + address + " = " + tokens[address]);
+
+  };
+
+  const startVoting = async () => {
+    try {
+
+      // const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, localProvider);
+      // await plantoid.startVoting();
+      await writeContracts.plantoid.startVoting()
     } catch (error) {
       console.log({ error });
     }
@@ -352,35 +376,38 @@ function App(props) {
   const purpose = useContractReader(readContracts, "YourContract", "purpose");
 
   const artist = useContractReader(readContracts, "plantoid", "artist");
-  
-  console.log({artist})
 
-  const spawnCount = useContractReader(readContracts, "plantoid", "spawnCount");
+  console.log({ artist })
+
+  const round = useContractReader(readContracts, "plantoid", "round");
   const loggedCount = useContractReader(readContracts, "plantoid", "proposalCounter", [0]);
 
   const tokenIDs = useContractReader(readContracts, "plantoid", "_tokenIds");
   console.log("NUMBER OF IDss---------- " + tokenIDs)
 
+  const threshold = useContractReader(readContracts, "plantoid", "threshold");
+  const escrow = useContractReader(readContracts, "plantoid", "escrow"); 
+
   const [proposalCount, setProposalCount] = useState(0);
 
   useEffect(() => {
-    if(loggedCount) {
+    if (loggedCount) {
       let num = Number(loggedCount);
       console.log(proposalCount, 'count set')
       setProposalCount(num)
       console.log(proposalCount, 'count set2')
-      
-    }
-  },[loggedCount])
 
-  const [proposalsList, setProposalsList] = useState([[0,"",""]]);
+    }
+  }, [loggedCount])
+
+  const [proposalsList, setProposalsList] = useState([[0, "", ""]]);
 
 
   useEffect(() => {
-    async function getProposals() {  
-        console.log(proposalCount, 'COUNT!')
-        console.log("PROP 0 ==== " + proposalsList[0])
-        let tempPropsList = [[0,"",""]];
+    async function getProposals() {
+      console.log(proposalCount, 'COUNT!')
+      console.log("PROP 0 ==== " + proposalsList[0])
+      let tempPropsList = [[0, "", ""]];
       for (var i = 1; i <= proposalCount; i++) {
         let tempProp = await readContracts.plantoid.proposals(0, i);
         tempPropsList.push([i, tempProp[0], tempProp[1]]);
@@ -392,9 +419,9 @@ function App(props) {
 
   console.log({ proposalCount });
 
-  
 
-  
+
+
 
 
 
@@ -521,6 +548,13 @@ function App(props) {
         logoutOfWeb3Modal={logoutOfWeb3Modal}
         USE_NETWORK_SELECTOR={USE_NETWORK_SELECTOR}
       />
+
+      <div>
+        Number of tokens: { tokens[address] }<br></br>
+        Total tokens: {totTokens}
+      </div>
+
+
       <Menu style={{ textAlign: "center", marginTop: 20 }} selectedKeys={[location.pathname]} mode="horizontal">
         <Menu.Item key="/">
           <Link to="/">Feed</Link>
@@ -553,7 +587,12 @@ function App(props) {
               />
               <Address address={artist} ensProvider={mainnetProvider} blockExplorer={blockExplorer} fontSize={20} />
               <Divider />
-              Current balance: { plantoidBalance.toString() }
+              Current balance: {ethers.utils.formatEther(plantoidBalance.toString())} <br />
+              Required threshold: {threshold ? ethers.utils.formatEther(threshold.toString()) : "???"}  <br />
+              Currently in escrow: { escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}
+
+
+
               <Divider />
               Amount
               <EtherInput
@@ -563,7 +602,7 @@ function App(props) {
                   setTxValue(value);
                 }}
               />
-              <Button
+              <Button disabled={!txValue}
                 onClick={() => {
                   /* look how we call setPurpose AND send some value along */
                   feedPlantoid(plantoidAddress);
@@ -571,15 +610,22 @@ function App(props) {
                 }}
               >
                 Feed
-              </Button>
+              </Button >
+
+              <Button disabled={plantoidBalance < threshold}
+                onClick={() => {
+                  startVoting();
+                }
+                }>Start submissions</Button> <br />
+
+
 
               <Divider />
-              # of Seeds : { spawnCount?.toString() }
-              # of Proposals : { proposalCount?.toString() }
 
-              <Divider />
-                  {console.log(proposalsList, 'list check')}
-                {(100000000000000001 > 10000000000000000) && <Proposals plantoidAddress={plantoidAddress} localProvider={userSigner} proposalsList={proposalsList} proposalCount={proposalCount} /> } 
+
+              {round ?
+                <Proposals plantoidAddress={plantoidAddress} localProvider={localProvider} user={address} proposalsList={proposalsList} proposalCount={proposalCount} round={round} tokens={tokens} />
+                : <br></br>}
 
 
             </div>
