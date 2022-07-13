@@ -1,13 +1,16 @@
 import { store, Bytes, BigInt } from '@graphprotocol/graph-ts'
 import { ProposalSubmitted, Transfer } from '../generated/templates/Plantoid/Plantoid'
 import { PlantoidSpawned } from '../generated/PlantoidSpawn/PlantoidSpawn'
-import { Seed, Holder, Proposal } from '../generated/schema'
+import { Seed, Holder, Proposal, PlantoidInstance } from '../generated/schema'
 import { Plantoid } from '../generated/templates'
 
 export function handleNewPlantoid(event: PlantoidSpawned): void {
     // Start indexing the exchange; `event.params.exchange` is the
     // address of the new exchange contract
     Plantoid.create(event.params.plantoid)
+    let newAddress = event.params.plantoid.toHex()
+    let newPlantoid = new PlantoidInstance(newAddress)
+    newPlantoid.save()
 }
 let ZERO_ADDRESS_STRING = '0x0000000000000000000000000000000000000000'
 
@@ -99,6 +102,7 @@ export function handleProposalSubmitted(event: ProposalSubmitted): void {
     proposal.uri = uri
     proposal.round = event.params.round
     proposal.vetoed = false
+    proposal.proposalId = event.params.proposalId
     
     proposal.save()
 }

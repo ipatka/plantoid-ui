@@ -1,5 +1,6 @@
 import { Button, Col, Menu, Row, Input, Divider, List, Image } from "antd";
 import "antd/dist/antd.css";
+import { gql, useQuery } from "@apollo/client";
 import {
   useBalance,
   useContractLoader,
@@ -12,6 +13,9 @@ import { useEventListener } from "eth-hooks/events/useEventListener";
 import { useExchangeEthPrice } from "eth-hooks/dapps/dex";
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, Route, Switch, useLocation } from "react-router-dom";
+import GraphiQL from "graphiql";
+import "graphiql/graphiql.min.css";
+import fetch from "isomorphic-fetch";
 import "./App.css";
 import {
   Account,
@@ -33,11 +37,7 @@ import {
 } from "./components";
 import { NETWORKS, ALCHEMY_KEY } from "./constants";
 import externalContracts from "./contracts/external_contracts";
-import GnosisSafeABI from "./contracts/gnosisSafe";
 import PlantoidABI from "./contracts/plantoid";
-import MultisendABI from "./contracts/multisend";
-import TipRelayerABI from "./contracts/relayer";
-import SignatureDbABI from "./contracts/signaturedb";
 // contracts
 import deployedContracts from "./contracts/hardhat_contracts.json";
 import { Transactor, Web3ModalSetup } from "./helpers";
@@ -48,7 +48,6 @@ import { ZERO_ADDRESS } from "./components/Swap";
 import { safeSignTypedData, encodeMultiSend, MetaTransaction } from "@gnosis.pm/safe-contracts";
 
 const { ethers, BigNumber } = require("ethers");
-
 
 /*
     Welcome to 🏗 scaffold-eth !
@@ -81,17 +80,7 @@ const USE_NETWORK_SELECTOR = false;
 const web3Modal = Web3ModalSetup();
 
 // 🛰 providers
-const providers = [
-  `https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`,
-  "https://rpc.scaffoldeth.io:48544",
-];
-
-const encodeMultiAction = (multisend, metatransactions) => {
-  console.log({ metatransactions });
-  const encodedMetatransactions = encodeMultiSend(metatransactions);
-  const multi_action = multisend.interface.encodeFunctionData("multiSend", [encodedMetatransactions]);
-  return multi_action;
-};
+const providers = [`https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`, "https://rpc.scaffoldeth.io:48544"];
 
 function App(props) {
   // specify all the chains your app is available on. Eg: ['localhost', 'mainnet', ...otherNetworks ]
@@ -100,79 +89,42 @@ function App(props) {
 
   const [injectedProvider, setInjectedProvider] = useState();
   const [address, setAddress] = useState();
-  const [toAddress, setToAddress] = useState();
-  const [gnosisAddress, setGnosisAddress] = useState();
-  const [txData, setTxData] = useState();
-  const [txComment, setTxComment] = useState();
-  const [txs, setTxs] = useState([]);
   const [txValue, setTxValue] = useState();
-  const [signatures, setSignatures] = useState([]);
-  const [encodedTx, setEncodedTx] = useState();
-  const [multisendAction, setMultisendAction] = useState();
-  const [txHash, setTxHash] = useState();
-  const [tipValue, setTipValue] = useState();
   const [selectedNetwork, setSelectedNetwork] = useState(networkOptions[0]);
 
-
-
   const location = useLocation();
-
-  const addTx = async () => {
-    const newTxs = [...txs];
-    newTxs.push({
-      to: toAddress,
-      data: txData,
-      value: txValue,
-      operation: 0,
-    });
-    console.log({ newTxs });
-    setTxs(newTxs);
-  };
-
-  const encodeTransaction = (
-    to,
-    value,
-    data,
-    operation,
-    safeTxGas,
-    baseGas,
-    gasPrice,
-    gasToken,
-    refundReceiver,
-    nonce,
-    comment,
-  ) => {
-    return ethers.utils.defaultAbiCoder.encode(
-      [
-        "address",
-        "uint256",
-        "bytes",
-        "uint256",
-        "uint256",
-        "uint256",
-        "uint256",
-        "address",
-        "address",
-        "uint256",
-        "string",
-      ],
-      [to, value, data, operation, safeTxGas, baseGas, gasPrice, gasToken, refundReceiver, nonce, comment],
-    );
-  };
-
-  const submitSignature = async () => {
-    try {
-      console.log({ gnosisAddress, txHash, encodedTx, signatures });
-      await writeContracts.SignatureDb.addSignatures(gnosisAddress, txHash, signatures[0]);
-    } catch (error) {
-      console.log({ error });
+  const EXAMPLE_GRAPHQL = `
+  {
+    seeds {
+      id
+      holder {
+        address
+        seedCount
+      }
+      tokenId
+      revealed
     }
-  };
+    holders {
+      address
+      seedCount
+    }
+    proposals {
+      round
+      id
+      uri
+    }
+    holder(id: "0x772f89e4df3fe97f06eb541a19ac2cffd54e1c88") {
+      seeds {
+        tokenId
+      }
+      seedCount
+    }
+  }
+  `;
+  const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
+  const { loading, data } = useQuery(EXAMPLE_GQL, { pollInterval: 2500 });
 
-
-  const [tokens, setTokens] = useState({});
-  const [totTokens, setTotTokens] = useState(3);
-
+  console.log(data);
 
   const feedPlantoid = async plantoidAddress => {
     try {
@@ -180,106 +132,13 @@ function App(props) {
     } catch (error) {
       console.log({ error });
     }
-    const newTokens = { ...tokens }
-    newTokens[address] = newTokens[address] ? newTokens[address] += 1 : 1
-    setTokens(newTokens);
-
-    //setTotTokens(totTokens + 1);
-
-    console.log("tokens for " + address + " = " + tokens[address]);
-
   };
 
   const startVoting = async () => {
     try {
-
       // const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, localProvider);
       // await plantoid.startVoting();
-      await writeContracts.plantoid.startVoting()
-    } catch (error) {
-      console.log({ error });
-    }
-  };
-
-  const createAndSign = async () => {
-    const gnosisAddressChecksum = ethers.utils.getAddress(gnosisAddress);
-    const toAddressChecksum = ethers.utils.getAddress(toAddress);
-    console.log({ gnosisAddress, gnosisAddressChecksum, toAddress, toAddressChecksum });
-    try {
-      const multisendContract = new ethers.Contract(
-        "0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761",
-        MultisendABI,
-        localProvider,
-      );
-      // TODO fix address
-      const relayerContract = new ethers.Contract(
-        "0xda945d66170849d6eef90df09cd1f235d83efa66", // Rinkeby
-        TipRelayerABI,
-        localProvider,
-      );
-      const gnosisSafe = new ethers.Contract(gnosisAddressChecksum, GnosisSafeABI, localProvider);
-
-      txs.push({
-        to: relayerContract.address,
-        data: "0x",
-        value: ethers.utils.parseEther(tipValue),
-        operation: 0,
-      });
-
-      const nonce = await gnosisSafe.nonce();
-
-      const multisendAction = encodeMultiAction(multisendContract, txs);
-
-      console.log({ nonce, multisendAction });
-
-      // todo abi encode the arguments into bytes for storage
-
-      const abiEncoded = encodeTransaction(
-        multisendContract.address,
-        0,
-        multisendAction,
-        1,
-        0,
-        0,
-        0,
-        ZERO_ADDRESS,
-        ZERO_ADDRESS,
-        nonce,
-        txComment,
-      );
-
-      setEncodedTx(abiEncoded);
-      setMultisendAction(multisendAction);
-      const newTxHash = await gnosisSafe.callStatic.getTransactionHash(
-        multisendContract.address,
-        0,
-        multisendAction,
-        1,
-        0,
-        0,
-        0,
-        ZERO_ADDRESS,
-        ZERO_ADDRESS,
-        nonce,
-      );
-      setTxHash(newTxHash);
-      console.log({ newTxHash, abiEncoded });
-      const signed = await safeSignTypedData(userSigner, gnosisSafe, {
-        to: multisendContract.address,
-        value: 0,
-        data: multisendAction,
-        operation: 1,
-        safeTxGas: 0,
-        baseGas: 0,
-        gasPrice: 0,
-        gasToken: ZERO_ADDRESS,
-        refundReceiver: ZERO_ADDRESS,
-        nonce,
-      });
-      const newSigs = [...signatures];
-      newSigs.push(signed.data);
-      console.log({ newSigs });
-      setSignatures(newSigs);
+      await writeContracts.plantoid.startVoting();
     } catch (error) {
       console.log({ error });
     }
@@ -343,7 +202,6 @@ function App(props) {
   // 🏗 scaffold-eth is full of handy hooks like this one to get your balance:
   const yourLocalBalance = useBalance(localProvider, address);
 
-
   // Just plug in different 🛰 providers to get your balance on different chains:
   const yourMainnetBalance = useBalance(mainnetProvider, address);
 
@@ -373,57 +231,17 @@ function App(props) {
   ]);
 
   // keep track of a variable from the contract in the local React state:
-  const purpose = useContractReader(readContracts, "YourContract", "purpose");
 
   const artist = useContractReader(readContracts, "plantoid", "artist");
 
-  console.log({ artist })
+  console.log({ artist });
 
   const round = useContractReader(readContracts, "plantoid", "round");
-  const loggedCount = useContractReader(readContracts, "plantoid", "proposalCounter", [0]);
 
-  const tokenIDs = useContractReader(readContracts, "plantoid", "_tokenIds");
-  console.log("NUMBER OF IDss---------- " + tokenIDs)
+  console.log("NUMBER OF IDss---------- " + data?.seeds.length);
 
   const threshold = useContractReader(readContracts, "plantoid", "threshold");
-  const escrow = useContractReader(readContracts, "plantoid", "escrow"); 
-
-  const [proposalCount, setProposalCount] = useState(0);
-
-  useEffect(() => {
-    if (loggedCount) {
-      let num = Number(loggedCount);
-      console.log(proposalCount, 'count set')
-      setProposalCount(num)
-      console.log(proposalCount, 'count set2')
-
-    }
-  }, [loggedCount])
-
-  const [proposalsList, setProposalsList] = useState([[0, "", ""]]);
-
-
-  useEffect(() => {
-    async function getProposals() {
-      console.log(proposalCount, 'COUNT!')
-      console.log("PROP 0 ==== " + proposalsList[0])
-      let tempPropsList = [[0, "", ""]];
-      for (var i = 1; i <= proposalCount; i++) {
-        let tempProp = await readContracts.plantoid.proposals(0, i);
-        tempPropsList.push([i, tempProp[0], tempProp[1]]);
-      }
-      setProposalsList(tempPropsList)
-    }
-    getProposals();
-  }, [proposalCount]);
-
-  console.log({ proposalCount });
-
-
-
-
-
-
+  const escrow = useContractReader(readContracts, "plantoid", "escrow");
 
   /*
   const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
@@ -500,9 +318,8 @@ function App(props) {
 
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
-  const plantoidAddress = '0x9f1ac54BEF0DD2f6f3462EA0fa94fC62300d3a8e'
+  const plantoidAddress = "0xCafac3dD18aC6c6e92c921884f9E4176737C052c";
   const plantoidBalance = useBalance(localProvider, plantoidAddress);
-
 
   const events = useEventListener(readContracts, "plantoid", "Deposit", localProvider, 10983913);
 
@@ -550,10 +367,11 @@ function App(props) {
       />
 
       <div>
-        Number of tokens: { tokens[address] }<br></br>
-        Total tokens: {totTokens}
+        {/* Number of tokens: { tokens[address] }<br></br> */}
+        Number of tokens: {data?.holder?.seeds.length || 0}
+        <br></br>
+        Total tokens: {data?.seeds.length || "???"}
       </div>
-
 
       <Menu style={{ textAlign: "center", marginTop: 20 }} selectedKeys={[location.pathname]} mode="horizontal">
         <Menu.Item key="/">
@@ -561,6 +379,9 @@ function App(props) {
         </Menu.Item>
         <Menu.Item key="/claim">
           <Link to="/claim">Claim</Link>
+        </Menu.Item>
+        <Menu.Item key="/subgraph">
+          <Link to="/subgraph">Subgraph</Link>
         </Menu.Item>
       </Menu>
 
@@ -588,11 +409,8 @@ function App(props) {
               <Address address={artist} ensProvider={mainnetProvider} blockExplorer={blockExplorer} fontSize={20} />
               <Divider />
               Current balance: {ethers.utils.formatEther(plantoidBalance.toString())} <br />
-              Required threshold: {threshold ? ethers.utils.formatEther(threshold.toString()) : "???"}  <br />
-              Currently in escrow: { escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}
-
-
-
+              Required threshold: {threshold ? ethers.utils.formatEther(threshold.toString()) : "???"} <br />
+              Currently in escrow: {escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}
               <Divider />
               Amount
               <EtherInput
@@ -602,7 +420,8 @@ function App(props) {
                   setTxValue(value);
                 }}
               />
-              <Button disabled={!txValue}
+              <Button
+                disabled={!txValue}
                 onClick={() => {
                   /* look how we call setPurpose AND send some value along */
                   feedPlantoid(plantoidAddress);
@@ -610,24 +429,28 @@ function App(props) {
                 }}
               >
                 Feed
-              </Button >
-
-              <Button disabled={plantoidBalance < threshold}
+              </Button>
+              <Button
+                disabled={plantoidBalance < threshold}
                 onClick={() => {
                   startVoting();
-                }
-                }>Start submissions</Button> <br />
-
-
-
+                }}
+              >
+                Start submissions
+              </Button>{" "}
+              <br />
               <Divider />
-
-
-              {round ?
-                <Proposals plantoidAddress={plantoidAddress} userSigner={userSigner} user={address} proposalsList={proposalsList} proposalCount={proposalCount} round={round} tokens={tokens} />
-                : <br></br>}
-
-
+              {round ? (
+                <Proposals
+                  plantoidAddress={plantoidAddress}
+                  userSigner={userSigner}
+                  user={address}
+                  graphData={data}
+                  round={round}
+                />
+              ) : (
+                <br></br>
+              )}
             </div>
             <div style={{ width: 600, margin: "auto", marginTop: 32, paddingBottom: 32 }}>
               <h2>Events:</h2>
@@ -653,61 +476,16 @@ function App(props) {
           <div>
             <div style={{ border: "1px solid #cccccc", padding: 16, width: 400, margin: "auto", marginTop: 64 }}>
               <h2>Tx Signer:</h2>
-              <Divider />
-              <div style={{ margin: 8 }}></div>
-              Gnosis Safe
-              <AddressInput onChange={setGnosisAddress} value={gnosisAddress}></AddressInput>
-              TX Hash
-              <Input onChange={e => setTxHash(e.target.value)} value={txData}></Input>
-              <Divider />
-              <Button
-                onClick={() => {
-                  /* look how we call setPurpose AND send some value along */
-                  addTx();
-                  /* this will fail until you make the setPurpose function payable */
-                }}
-              >
-                Load transaction
-              </Button>
-              <Divider />
-              Comments
-              <Input onChange={e => setTxComment(e.target.value)} value={txComment}></Input>
-              <Divider />
-              <Button
-                onClick={() => {
-                  /* look how we call setPurpose AND send some value along */
-                  createAndSign();
-                  /* this will fail until you make the setPurpose function payable */
-                }}
-              >
-                Sign transactions
-              </Button>
-              <Button
-                onClick={() => {
-                  /* look how we call setPurpose AND send some value along */
-                  submitSignature();
-                  /* this will fail until you make the setPurpose function payable */
-                }}
-              >
-                Save transactions
-              </Button>
-            </div>
-            <div style={{ width: 600, margin: "auto", marginTop: 32, paddingBottom: 32 }}>
-              <h2>Txs:</h2>
-              <List
-                bordered
-                dataSource={txs}
-                renderItem={item => {
-                  return (
-                    <List.Item key={(Math.random() + 1).toString(36).substring(7)}>
-                      <Address address={item.to} ensProvider={mainnetProvider} fontSize={16} />
-                      {item.data.slice(0, 15)}...
-                    </List.Item>
-                  );
-                }}
-              />
             </div>
           </div>
+        </Route>
+        <Route path="/subgraph">
+          <Subgraph
+            subgraphUri={props.subgraphUri}
+            tx={tx}
+            writeContracts={writeContracts}
+            mainnetProvider={mainnetProvider}
+          />
         </Route>
       </Switch>
 
