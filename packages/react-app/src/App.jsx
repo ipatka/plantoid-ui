@@ -113,6 +113,7 @@ function App(props) {
     proposals {
       round
       id
+      proposalId
       uri
     }
     holder(id: $address) {
@@ -124,7 +125,6 @@ function App(props) {
   }
   `;
   const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
-  const myAdd = '0x772f89e4df3fe97f06eb541a19ac2cffd54e1c88'
   const { loading, error, data } = useQuery(EXAMPLE_GQL, { pollInterval: 2500, variables: {address: address ? address.toLowerCase() : ZERO_ADDRESS}});
 
   console.log(error, data);

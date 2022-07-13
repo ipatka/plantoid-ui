@@ -61,8 +61,8 @@ export default function Proposals({
                 // <div />
                 <div>
                   {/* {`${prop.round}, ${prop[1].substring(0, 7)}..., ${prop[2]}`} */}
-                  {`${prop.round}, ${prop.id}, ${prop.uri}`}
-                  -- votes: {tokens / totTokens} %
+                  {`${prop.round}, ${prop.proposalId}, ${prop.uri}`}
+                  -- votes: {(tokens / totTokens) * 100} %
                   <Button
                     onClick={async () => {
                       submitVote(plantoidAddress, userSigner, prop);
