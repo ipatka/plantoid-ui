@@ -1997,22 +1997,10 @@ const PlantoidABI = [
 
 // Mainnet DAI, Optimism and Arbitrium Rollup Contracts with local addresses
 module.exports = {
-  1: {
-    contracts: {
-      DAI: {
-        address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-        abi: DAIABI,
-      },
-      UNI: {
-        address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
-        abi: ERC20ABI,
-      },
-    },
-  },
   4: {
     contracts: {
       plantoid: {
-        address: "0xCafac3dD18aC6c6e92c921884f9E4176737C052c",
+        address: "0xbf9fBFf01664500A33080Da5d437028b07DFcC55",
         abi: PlantoidABI,
       },
     },
@@ -2020,7 +2008,7 @@ module.exports = {
   31337: {
     contracts: {
       plantoid: {
-        address: "0xCafac3dD18aC6c6e92c921884f9E4176737C052c",
+        address: "0xbf9fBFf01664500A33080Da5d437028b07DFcC55",
         abi: PlantoidABI,
       },
     },

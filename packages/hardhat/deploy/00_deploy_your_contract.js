@@ -27,7 +27,7 @@ const config = {
   artistAddress: "0x775aF9b7c214Fe8792aB5f5da61a8708591d517E",
   parentAddress: zeroAddress,
   depositThreshold: ethers.utils.parseEther("0.0001"),
-  threshold: ethers.utils.parseEther("1"),
+  threshold: ethers.utils.parseEther("0.001"),
   name: "Plantoid",
   prereveal: "preveal",
   symbol: "LIFE",
