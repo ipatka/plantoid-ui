@@ -77,6 +77,8 @@ const NETWORKCHECK = true;
 const USE_BURNER_WALLET = true; // toggle burner wallet feature
 const USE_NETWORK_SELECTOR = false;
 
+const ZERO_ADDRESS_STRING = "0x0000000000000000000000000000000000000000";
+
 const web3Modal = Web3ModalSetup();
 
 // 🛰 providers
@@ -93,7 +95,7 @@ function App(props) {
   const [selectedNetwork, setSelectedNetwork] = useState(networkOptions[0]);
 
   const location = useLocation();
-  const EXAMPLE_GRAPHQL = `
+  const EXAMPLE_GRAPHQL = `query getPlantoid($address: String)
   {
     seeds {
       id
@@ -113,7 +115,7 @@ function App(props) {
       id
       uri
     }
-    holder(id: "0x772f89e4df3fe97f06eb541a19ac2cffd54e1c88") {
+    holder(id: $address) {
       seeds {
         tokenId
       }
@@ -122,9 +124,10 @@ function App(props) {
   }
   `;
   const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
-  const { loading, data } = useQuery(EXAMPLE_GQL, { pollInterval: 2500 });
+  const myAdd = '0x772f89e4df3fe97f06eb541a19ac2cffd54e1c88'
+  const { loading, error, data } = useQuery(EXAMPLE_GQL, { pollInterval: 2500, variables: {address: address ? address.toLowerCase() : ZERO_ADDRESS}});
 
-  console.log(data);
+  console.log(error, data);
 
   const feedPlantoid = async plantoidAddress => {
     try {

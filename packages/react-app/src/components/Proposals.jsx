@@ -25,7 +25,7 @@ export default function Proposals({
   };
 
     const proposalsList = graphData?.proposals
-    const proposalCount = graphData?.proposals.length
+    const proposalCount = graphData?.proposals.length || 0
     const tokens = graphData?.holder.seedCount
     const totTokens = graphData?.seeds.length
     
