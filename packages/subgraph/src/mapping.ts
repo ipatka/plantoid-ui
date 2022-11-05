@@ -1,7 +1,7 @@
 import { store, Bytes, BigInt } from '@graphprotocol/graph-ts'
-import { ProposalSubmitted, Transfer } from '../generated/templates/Plantoid/Plantoid'
+import { ProposalSubmitted, Transfer, Voted, VotingStarted } from '../generated/templates/Plantoid/Plantoid'
 import { PlantoidSpawned } from '../generated/PlantoidSpawn/PlantoidSpawn'
-import { Seed, Holder, Proposal, PlantoidInstance } from '../generated/schema'
+import { Seed, Holder, Proposal, PlantoidInstance, Vote } from '../generated/schema'
 import { Plantoid } from '../generated/templates'
 
 export function handleNewPlantoid(event: PlantoidSpawned): void {
@@ -100,9 +100,63 @@ export function handleProposalSubmitted(event: ProposalSubmitted): void {
     proposal.proposer = from
     proposal.voteCount = ZERO
     proposal.uri = uri
-    proposal.round = event.params.round
+    proposal.round = event.params.round.toHexString()
     proposal.vetoed = false
     proposal.proposalId = event.params.proposalId
     
     proposal.save()
 }
+
+export function handleVoted(event: Voted): void {
+    let from = event.params.voter.toHex()
+    let round = event.params.round.toHexString()
+    let tokenId = event.params.tokenId.toHexString()
+    let choice = event.params.choice.toHexString()
+    let id = round + '_' + tokenId + '_' + choice
+
+    let proposalId = event.params.round.toHexString() + '_' + event.params.choice.toHexString()
+
+    let voter = Holder.load(from)
+    if (voter === null) {
+        voter = new Holder(from)
+        voter.address = event.params.voter
+        voter.seedCount = ZERO
+        voter.createdAt = event.block.timestamp
+    }
+    
+    voter.save()
+
+    let vote = new Vote(id)
+    vote.voter = from
+    vote.round = round
+    vote.proposal = proposalId
+    vote.seed = tokenId
+    
+    vote.save()
+}
+
+export function handleVotingStarted(event: VotingStarted): void {
+    let round = event.params.round.toHexString()
+    let end = event.params.end
+
+    let proposalId = event.params.round.toHexString() + '_' + event.params.choice.toHexString()
+
+    let voter = Holder.load(from)
+    if (voter === null) {
+        voter = new Holder(from)
+        voter.address = event.params.voter
+        voter.seedCount = ZERO
+        voter.createdAt = event.block.timestamp
+    }
+    
+    voter.save()
+
+    let vote = new Vote(id)
+    vote.voter = from
+    vote.round = event.params.round
+    vote.proposal = proposalId
+    vote.seed = tokenId
+    
+    vote.save()
+}
+

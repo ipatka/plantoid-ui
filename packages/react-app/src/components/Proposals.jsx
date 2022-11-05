@@ -26,8 +26,9 @@ export default function Proposals({
 
     const proposalsList = graphData?.proposals
     const proposalCount = graphData?.proposals.length || 0
-    const tokens = graphData?.holder.seedCount
+    const tokens = graphData?.holder?.seedCount
     const totTokens = graphData?.seeds.length
+    const userTokens = graphData?.seeds.map((s) => s.tokenId)
     
     console.log({graphData, tokens, totTokens})
   return (
@@ -65,7 +66,7 @@ export default function Proposals({
                   -- votes: {(tokens / totTokens) * 100} %
                   <Button
                     onClick={async () => {
-                      submitVote(plantoidAddress, userSigner, prop);
+                      submitVote(plantoidAddress, userSigner, prop, userTokens);
                     }}
                   >
                     vote
@@ -97,6 +98,7 @@ const submitVote = async (plantoidAddress, userSigner, prop, userTokenIds) => {
     const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, userSigner);
     //const votokens = Array.from({length: tokens[user] || 1}, (_, i) => i + 1) ;
     //console.log({votokens, prop});
+    console.log({userTokenIds})
     await plantoid.submitVote(0, prop.proposalId, userTokenIds);
 
     console.log("hereeeeee");

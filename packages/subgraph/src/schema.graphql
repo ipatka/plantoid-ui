@@ -15,12 +15,13 @@ type Holder @entity {
   seedCount: BigInt!
   seeds: [Seed!] @derivedFrom(field: "holder")
   proposals: [Proposal!] @derivedFrom(field: "proposer")
+  votes: [Vote!] @derivedFrom(field: "voter")
   createdAt: BigInt!
 }
 
 type Proposal @entity {
   id: ID!
-  round: BigInt!
+  round: Round!
   proposalId: BigInt!
   uri: String!
   voteCount: BigInt!
@@ -31,9 +32,15 @@ type Proposal @entity {
 
 type Vote @entity {
   id: ID!
-  round: BigInt!
+  voter: Holder!
+  round: Round!
   proposal: Proposal!
   seed: Seed!
+}
+
+type Round @entity {
+  id: ID!
+  votingEnd: BigInt!
 }
 
 type PlantoidInstance @entity {

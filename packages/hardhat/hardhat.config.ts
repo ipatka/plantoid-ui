@@ -86,7 +86,7 @@ const networks = {
         },
     },
     xdai: {
-        url: 'https://rpc.xdaichain.com/',
+        url: 'https://rpc.gnosischain.com/',
         gasPrice: 1000000000,
         accounts: {
             mnemonic: mnemonic(),

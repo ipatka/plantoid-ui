@@ -25,6 +25,10 @@ templates:
           handler: handleSeedTransfer
         - event: ProposalSubmitted(address,string,uint256,uint256) 
           handler: handleProposalSubmitted
+        - event: Voted(address,uint256,uint256,uint256) 
+          handler: handleVoted
+        - event: VotingStarted(uint256,uint256) 
+          handler: handleVotingStarted
 dataSources:
   - kind: ethereum/contract
     name: PlantoidSpawn
