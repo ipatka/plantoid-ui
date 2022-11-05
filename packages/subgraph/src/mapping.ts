@@ -135,28 +135,28 @@ export function handleVoted(event: Voted): void {
     vote.save()
 }
 
-export function handleVotingStarted(event: VotingStarted): void {
-    let round = event.params.round.toHexString()
-    let end = event.params.end
+// export function handleVotingStarted(event: VotingStarted): void {
+//     let round = event.params.round.toHexString()
+//     let end = event.params.end
 
-    let proposalId = event.params.round.toHexString() + '_' + event.params.choice.toHexString()
+//     let proposalId = event.params.round.toHexString() + '_' + event.params.choice.toHexString()
 
-    let voter = Holder.load(from)
-    if (voter === null) {
-        voter = new Holder(from)
-        voter.address = event.params.voter
-        voter.seedCount = ZERO
-        voter.createdAt = event.block.timestamp
-    }
+//     let voter = Holder.load(from)
+//     if (voter === null) {
+//         voter = new Holder(from)
+//         voter.address = event.params.voter
+//         voter.seedCount = ZERO
+//         voter.createdAt = event.block.timestamp
+//     }
     
-    voter.save()
+//     voter.save()
 
-    let vote = new Vote(id)
-    vote.voter = from
-    vote.round = event.params.round
-    vote.proposal = proposalId
-    vote.seed = tokenId
+//     let vote = new Vote(id)
+//     vote.voter = from
+//     vote.round = event.params.round
+//     vote.proposal = proposalId
+//     vote.seed = tokenId
     
-    vote.save()
-}
+//     vote.save()
+// }
 
