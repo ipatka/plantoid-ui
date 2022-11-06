@@ -6,7 +6,6 @@ type Seed @entity {
   uri: String!
   createdAt: BigInt!
   transactionHash: String!
-  votes: [Vote!] @derivedFrom(field: "seed")
 }
 
 type Holder @entity {
@@ -35,12 +34,11 @@ type Vote @entity {
   voter: Holder!
   round: Round!
   proposal: Proposal!
-  seed: Seed!
+  eligibleVotes: BigInt!
 }
 
 type Round @entity {
   id: ID!
-  votingEnd: BigInt!
 }
 
 type PlantoidInstance @entity {

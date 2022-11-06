@@ -1,45 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.15;
+pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "./base/ERC721Checkpointable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {SafeTransferLib} from "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
-
-interface IPlantoidSpawner {
-    function spawnPlantoid(
-        address,
-        address payable,
-        address payable,
-        uint256[2] memory,
-        uint256[4] memory,
-        string memory,
-        string memory,
-        string memory
-    ) external returns (bool, address);
-}
-error StillVoting();
-error NotInVoting();
-error AlreadyVoting();
-error NotMinted();
-error NotOwner();
-error AlreadyRevealed();
-error InvalidProposal();
-error Vetoed();
-error NoVotingTokens();
-error URIQueryForNonexistentToken();
-error ThresholdNotReached();
-error AlreadyVoted();
-error NotArtist();
-error NotWinner();
-error FailedToSendETH();
-error FailedToSpawn();
+import {IPlantoid, IPlantoidSpawner} from "./IPlantoid.sol";
 
 /// @title Plantoid
 /// @dev Blockchain based lifeform
 ///
 ///
-contract Plantoid is ERC721Enumerable, Initializable {
+contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     using SafeTransferLib for address payable;
     using ECDSA for bytes32; /*ECDSA for signature recovery for license mints*/
 
@@ -51,14 +24,10 @@ contract Plantoid is ERC721Enumerable, Initializable {
         uint256 round,
         uint256 proposalId
     );
+    event ProposalStarted(uint256 round, uint256 end);
     event VotingStarted(uint256 round, uint256 end);
-    event Voted(address voter, uint256 tokenId, uint256 round, uint256 choice);
-    event ProposalVetoed(
-        uint256 round,
-        address settler,
-        uint256 proposal,
-        uint256 end
-    );
+    event Voted(address voter, uint256 votes, uint256 round, uint256 choice);
+    event ProposalVetoed(uint256 round, uint256 proposal);
     event ProposalAccepted(address settler, uint256 proposal);
     event NewSpawn(
         uint256 round,
@@ -68,16 +37,72 @@ contract Plantoid is ERC721Enumerable, Initializable {
         string name,
         string symbol
     );
+    event RoundAdvanced(uint256 round, RoundState state);
 
-    /* 
-        proposer: address of prospective artist
-        proposalUri: link to proposal details
-        vetoed: mark if proposal won but was vetoed by current artist
-    */
     struct Proposal {
+        uint256 votes;
         address proposer;
-        string proposalUri;
         bool vetoed;
+        string uri;
+    }
+
+    struct Round {
+        uint256 roundStart;
+        uint256 proposalEnd;
+        uint256 votingEnd;
+        uint256 graceEnd;
+        uint256 proposalCount;
+        uint256 totalVotes;
+        uint256 winningProposal;
+        mapping(uint256 => Proposal) proposals;
+        /// @notice Whether or not a vote has been cast
+        mapping(address => bool) hasVoted;
+        RoundState roundState;
+    }
+
+    function viewProposals(uint256 _round, uint256 _proposal)
+        public
+        view
+        returns (
+            uint256 votes,
+            address proposer,
+            bool vetoed,
+            string memory uri
+        )
+    {
+        votes = rounds[_round].proposals[_proposal].votes;
+        proposer = rounds[_round].proposals[_proposal].proposer;
+        vetoed = rounds[_round].proposals[_proposal].vetoed;
+        uri = rounds[_round].proposals[_proposal].uri;
+    }
+
+    function roundState(uint256 _round) public view returns (RoundState state) {
+        if (rounds[_round].roundState == RoundState.Pending)
+            return RoundState.Pending;
+        else if (rounds[_round].roundState == RoundState.Proposal) {
+            if (rounds[_round].proposalEnd > block.timestamp)
+                return RoundState.Proposal;
+            else return RoundState.NeedsAdvancement;
+        } else if (rounds[_round].roundState == RoundState.Voting) {
+            if (rounds[_round].votingEnd > block.timestamp)
+                return RoundState.Voting;
+            else return RoundState.NeedsAdvancement;
+        } else if (rounds[_round].roundState == RoundState.Grace) {
+            if (rounds[_round].graceEnd > block.timestamp)
+                return RoundState.Grace;
+            else return RoundState.NeedsSettlement;
+        } else return rounds[_round].roundState;
+    }
+
+    enum RoundState {
+        Pending,
+        Proposal,
+        Voting,
+        Grace,
+        Completed,
+        Invalid,
+        NeedsAdvancement,
+        NeedsSettlement
     }
 
     mapping(uint256 => bool) public revealed; /*Track if plantoid has revealed the NFT*/
@@ -93,27 +118,25 @@ contract Plantoid is ERC721Enumerable, Initializable {
     mapping(uint256 => uint256) public votingEnd; /*Voting round => time when voting ends*/
     uint256 public escrow; /*ETH locked until voting is concluded*/
 
-    mapping(uint256 => uint256) public proposalCounter; /* round => proposal count*/
-    mapping(uint256 => mapping(uint256 => Proposal)) public proposals; /* round => proposal Id => Proposal */
-    mapping(uint256 => uint256) public winningProposal; /* round => winning proposal Id */
+    mapping(uint256 => Round) public rounds; /* round => round state*/
 
-    mapping(uint256 => mapping(uint256 => uint256)) public voted; /* spawn count => token ID => chosen proposalId */
-    /*NOTE proposal IDs start at 1 so 0 counts as not voted*/
-    mapping(uint256 => mapping(uint256 => uint256)) public votes; /* spawn count => proposal Id => votes*/
+    // mapping(uint256 => mapping(uint256 => uint256)) public voted; /* spawn count => token ID => chosen proposalId */
+    // /*NOTE proposal IDs start at 1 so 0 counts as not voted*/
+    // mapping(uint256 => mapping(uint256 => uint256)) public votes; /* spawn count => proposal Id => votes*/
 
     uint256 public round; /* Track active voting round*/
     address payable public parent; /* Parent plantoid contract*/
     address payable public artist; /* Store artist for this plantoid*/
 
-    uint256 votingPeriod; /*Time during which holders can vote for active proposals*/
-    uint256 votingExt; /*How long to extend a vote if the winner is vetoed*/
-    uint256 gracePeriod; /*Time between voting ended and when vote can settle*/
-    uint256 settlePeriod; /*Time artist has to settle or veto, before anyone can settle*/
+    uint256 public proposalPeriod; /*Time during which artists can submit proposals*/
+    uint256 public votingPeriod; /*Time during which holders can vote for active proposals*/
+    uint256 public gracePeriod; /*Time between voting ended and when vote can settle*/
+
+    uint256 salt;
 
     /*****************
     Minting state mgmt
     *****************/
-    mapping(bytes32 => bool) public signatureUsed; /* track if minting signature has been used */
     address public plantoidAddress; /* Plantoid oracle TODO make changeable by creator? */
     uint256 _tokenIds; /* Track minted seed token IDS*/
     mapping(uint256 => string) private _tokenUris; /*Track token URIs for each seed*/
@@ -125,7 +148,7 @@ contract Plantoid is ERC721Enumerable, Initializable {
     string private _symbol; /*Token symbol override*/
     string public contractURI; /*contractURI contract metadata json*/
 
-    IPlantoidSpawner spawner; /*Contract to spawn new plantoids*/
+    IPlantoidSpawner public spawner; /*Contract to spawn new plantoids*/
 
     /*****************
     Configuration
@@ -138,33 +161,41 @@ contract Plantoid is ERC721Enumerable, Initializable {
     }
 
     /// @dev Initialize
-    /// @param _plantoid Address of plantoid oracle on physical sculpture
-    /// @param _artist Address of creator of this plantoid
-    /// @param name_ Token name for supporter seeds
-    /// @param symbol_ Token symbol for supporter seeds
     function init(
         address _plantoid,
         address payable _artist,
         address payable _parent,
-        uint256[2] memory _thresholds,
-        uint256[4] calldata _periods,
         string calldata name_,
         string calldata symbol_,
-        string calldata _prerevealUri
+        string calldata _prerevealUri,
+        bytes calldata _thresholdsAndPeriods
     ) external initializer {
         plantoidAddress = _plantoid;
         artist = _artist;
         parent = _parent;
-        depositThreshold = _thresholds[0];
-        threshold = _thresholds[1];
         _name = name_;
         _symbol = symbol_;
-        votingPeriod = _periods[0];
-        gracePeriod = _periods[1];
-        votingExt = _periods[2];
-        settlePeriod = _periods[3];
         prerevealUri = _prerevealUri;
         spawner = IPlantoidSpawner(msg.sender); /*Initialize interface to spawner*/
+        _setParameters(_thresholdsAndPeriods);
+    }
+
+    function _setParameters(bytes calldata _thresholdsAndPeriods) internal {
+        (
+            uint256 _depositThreshold,
+            uint256 _threshold,
+            uint256 _proposalPeriod,
+            uint256 _votingPeriod,
+            uint256 _gracePeriod
+        ) = abi.decode(
+                _thresholdsAndPeriods,
+                (uint256, uint256, uint256, uint256, uint256)
+            );
+        depositThreshold = _depositThreshold;
+        threshold = _threshold;
+        proposalPeriod = _proposalPeriod;
+        votingPeriod = _votingPeriod;
+        gracePeriod = _gracePeriod;
     }
 
     /*****************
@@ -199,113 +230,148 @@ contract Plantoid is ERC721Enumerable, Initializable {
     Reproductive functions
     *****************/
 
-    /// @notice Get max number of votes a proposal received in a round
-    /// @param _round Round to query
-    function maxVotes(uint256 _round) public view returns (uint256 _maxVotes) {
-        // Proposal IDs start at 1
-        for (uint256 _i = 1; _i <= proposalCounter[_round]; _i++) {
-            if (votes[_round][_i] > _maxVotes) _maxVotes = votes[_round][_i]; // Detect max amount of votes received in a round
-        }
-    }
-
-    /// @notice Once threshold is reached, begin the voting process
-    /// @dev Next round starts when non-escrow balance is over threshold
-    function startVoting() external {
+    /// @notice Once threshold is reached, begin the proposal period
+    /// @dev New rounds cannot begin until this one concludes
+    function startProposals() external {
+        if ((rounds[round].roundState != RoundState.Pending))
+            revert StillProposing();
         if ((address(this).balance - escrow) < threshold)
             revert ThresholdNotReached();
         escrow += threshold; /*Mark portion of balance as escrow so threshold resets*/
-        votingEnd[round] = block.timestamp + votingPeriod; /*Allow voting until now + period*/
-        emit VotingStarted(round, votingEnd[round]);
+        Round storage newRound = rounds[round];
 
-        round++; /*Increment round*/
+        newRound.roundStart = block.number;
+        newRound.proposalEnd = block.timestamp + proposalPeriod;
+        newRound.roundState = RoundState.Proposal;
+        emit ProposalStarted(round, rounds[round].proposalEnd);
+    }
+
+    function advanceRound() external {
+        Round storage currentRound = rounds[round];
+        RoundState currentState = roundState(round);
+        if (
+            (currentRound.roundState == RoundState.Proposal) &&
+            (currentState == RoundState.NeedsAdvancement)
+        ) {
+            // If no proposals were received, complete round and return escrow;
+            if (currentRound.proposalCount == 0) {
+                invalidateRound();
+            } else {
+                currentRound.roundState = RoundState.Voting;
+                currentRound.votingEnd = block.timestamp + votingPeriod;
+            }
+        } else if (
+            (currentRound.roundState == RoundState.Voting) &&
+            (currentState == RoundState.NeedsAdvancement)
+        ) {
+            // If no votes were received, complete round and return escrow;
+            if (currentRound.totalVotes == 0) {
+                invalidateRound();
+            } else {
+                currentRound.roundState = RoundState.Grace;
+                currentRound.graceEnd = block.timestamp + gracePeriod;
+            }
+        } else {
+            revert CannotAdvance();
+        }
+    }
+
+    function invalidateRound() internal {
+        Round storage currentRound = rounds[round];
+        currentRound.roundState = RoundState.Invalid;
+        escrow -= threshold;
+        emit RoundAdvanced(round, currentRound.roundState);
+        round++;
+    }
+
+    function vetoProposal(uint256 _proposal) external {
+        Round storage currentRound = rounds[round];
+        if ((msg.sender != artist)) revert NotArtist(); /*Only artist can veto*/
+        RoundState currentState = roundState(round);
+        if (
+            (currentState != RoundState.Voting) &&
+            (currentState != RoundState.Grace)
+        ) revert CannotVeto();
+        if (_proposal >= currentRound.proposalCount) revert InvalidProposal();
+        currentRound.proposals[_proposal].vetoed = true;
+        emit ProposalVetoed(round, _proposal);
+    }
+
+    function settleRound() external {
+        Round storage currentRound = rounds[round];
+        if (
+            (currentRound.roundState == RoundState.Grace) &&
+            (block.timestamp > currentRound.graceEnd)
+        ) {
+            // Find winning proposal
+            uint256 maxVotes;
+            for (
+                uint256 index = 0;
+                index < currentRound.proposalCount;
+                index++
+            ) {
+                if (
+                    (currentRound.proposals[index].votes > maxVotes) &&
+                    (!currentRound.proposals[index].vetoed)
+                ) {
+                    maxVotes = currentRound.proposals[index].votes;
+                    currentRound.winningProposal = index;
+                }
+            }
+
+            // If no winning proposal (all vetoed) return escrow and complete
+            if (maxVotes == 0) {
+                invalidateRound();
+            } else {
+                currentRound.roundState = RoundState.Completed;
+                round++;
+                emit RoundAdvanced(round, currentRound.roundState);
+            }
+        } else {
+            revert CannotAdvance();
+        }
     }
 
     /// @dev Propose reproduction if threshold is reached
-    /// @param _round Round to propose for - round is same as spawn count for this plantoid
     /// @param _proposalUri Link to artist proposal
-    function submitProposal(uint256 _round, string memory _proposalUri)
-        external
-    {
-        if (votingEnd[_round] < block.timestamp) revert NotInVoting();
-        proposalCounter[_round] += 1; /*Increment number of proposals in a round*/
-        proposals[_round][proposalCounter[_round]] = Proposal(
-            msg.sender,
-            _proposalUri,
-            false
-        ); /*Initiate a new proposal*/
+    function submitProposal(string memory _proposalUri) external {
+        Round storage currentRound = rounds[round];
+        if (currentRound.proposalEnd < block.timestamp)
+            revert CannotSubmitProposal(); /*Revert if voting period is over*/
+        currentRound.proposals[currentRound.proposalCount].uri = _proposalUri;
+        currentRound.proposals[currentRound.proposalCount].proposer = msg
+            .sender;
+        currentRound.proposalCount++;
+
+        // revert LogThis(currentRound.proposals[currentRound.proposalCount - 1].proposer, _proposalUri);
+        // revert LogThis(msg.sender, currentRound.proposals);
+
         emit ProposalSubmitted(
             msg.sender,
             _proposalUri,
-            _round,
-            proposalCounter[_round]
+            round,
+            currentRound.proposalCount - 1
         );
     }
 
     /// @notice Submit vote on round proposal
     /// @dev Must be within voting period
-    /// @param _round Round to vote for
     /// @param _proposal ID of proposal
-    /// @param _votingTokenIds IDs of tokens to use for vote
-    function submitVote(
-        uint256 _round,
-        uint256 _proposal,
-        uint256[] memory _votingTokenIds
-    ) external {
-        if (votingEnd[_round] < block.timestamp) revert NotInVoting(); /*Revert if voting period is over*/
-        if (proposals[_round][_proposal].proposer == address(0))
-            revert InvalidProposal(); /*Revert if proposal is blank*/
-        if (proposals[_round][_proposal].vetoed) revert Vetoed(); /*Revert if proposal is vetoed*/
-        if (_votingTokenIds.length == 0) revert NoVotingTokens(); /*Revert if empty array*/
-        for (uint256 index = 0; index < _votingTokenIds.length; index++) {
-            if (ownerOf(_votingTokenIds[index]) != msg.sender)
-                revert NotOwner(); /*Revert if not owner of selected token*/
-            if (
-                voted[_round][_votingTokenIds[index]] != 0 &&
-                !proposals[_round][_votingTokenIds[index]].vetoed
-            ) revert AlreadyVoted(); /*Revert if already voted and not vetoed*/
-
-            voted[_round][_votingTokenIds[index]] = _proposal; /*Mark votes per token*/
-            emit Voted(msg.sender, _votingTokenIds[index], _round, _proposal);
-        }
-        votes[_round][_proposal] += _votingTokenIds.length; /*Increment total votes for a proposal*/
-    }
-
-    /// @notice Accept winner by the artist, or veto the winner and extend the voting period
-    /// @dev If 2 proposals are tied, artist can pick winner from the ties
-    ///     If settle period passes, anyone can settle and pick a winner from a tie if relevant
-    /// @param _round Round to settle
-    /// @param _veto Proposal ID
-    function settle(
-        uint256 _round,
-        uint256 _winningProposal,
-        bool _veto
-    ) external {
-        if ((votingEnd[_round] + gracePeriod) > block.timestamp)
-            revert StillVoting();
-        if (
-            (msg.sender != artist) &&
-            ((votingEnd[_round] + settlePeriod) < block.timestamp)
-        ) revert NotArtist(); /*Only artist can settle, unless settle period has passed*/
-        if ((msg.sender != artist) && _veto) revert NotArtist(); /*Only artist can veto*/
-        if (proposals[_round][_winningProposal].proposer == address(0))
-            revert InvalidProposal(); /*Revert if proposal is blank*/
-        if (votes[_round][_winningProposal] != maxVotes(_round))
-            revert NotWinner(); /*Allow artist to select a tiebreaker*/
-        /*If proposal is vetoed, extend voting period and allow people to vote for a different proposal*/
-        if (_veto) {
-            votingEnd[_round] = block.timestamp + votingExt;
-            proposals[_round][_winningProposal].vetoed = true;
-            votes[_round][_winningProposal] = 0;
-            emit ProposalVetoed(
-                _round,
-                msg.sender,
-                _winningProposal,
-                votingEnd[_round]
-            );
-        } else {
-            winningProposal[_round] = _winningProposal; /*If not vetoed, mark winner*/
-            emit ProposalAccepted(msg.sender, _winningProposal);
-        }
+    function submitVote(uint256 _proposal) external {
+        Round storage currentRound = rounds[round];
+        if (currentRound.votingEnd < block.timestamp) revert NotInVoting(); /*Revert if voting period is over*/
+        if (_proposal >= currentRound.proposalCount) revert InvalidProposal(); /*Revert if proposal is blank*/
+        if (currentRound.proposals[_proposal].vetoed) revert Vetoed(); /*Revert if proposal is vetoed*/
+        if (currentRound.hasVoted[msg.sender]) revert AlreadyVoted();
+        uint256 eligibleVotes = getPriorVotes(
+            msg.sender,
+            currentRound.roundStart
+        );
+        if (eligibleVotes == 0) revert NoVotingTokens(); /*Revert if no balance when round started*/
+        currentRound.hasVoted[msg.sender] = true;
+        currentRound.totalVotes += eligibleVotes;
+        currentRound.proposals[_proposal].votes += eligibleVotes;
+        emit Voted(msg.sender, eligibleVotes, round, _proposal);
     }
 
     /// @dev Spawn new plantoid by winning artist
@@ -318,7 +384,7 @@ contract Plantoid is ERC721Enumerable, Initializable {
         address _newPlantoid,
         address payable _fundDestination,
         uint256[2] memory _thresholds,
-        uint256[4] memory _periods,
+        uint256[3] memory _periods,
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
@@ -348,7 +414,7 @@ contract Plantoid is ERC721Enumerable, Initializable {
         address _newPlantoid,
         address payable _fundDestination,
         uint256[2] memory _thresholds,
-        uint256[4] memory _periods,
+        uint256[3] memory _periods,
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
@@ -377,29 +443,34 @@ contract Plantoid is ERC721Enumerable, Initializable {
         address _newPlantoid,
         address payable _fundDestination,
         uint256[2] memory _thresholds,
-        uint256[4] memory _periods,
+        uint256[3] memory _periods,
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
     ) internal {
-        if (proposals[_round][winningProposal[_round]].proposer != msg.sender)
-            revert NotWinner();
+        Round storage currentRound = rounds[_round];
+        if (
+            (currentRound.proposals[currentRound.winningProposal].proposer !=
+                msg.sender) || (currentRound.roundState != RoundState.Completed)
+        ) revert NotWinner();
         escrow -= threshold; /*Reduce escrow balance*/
         uint256 _toParentOrArtist = (threshold * 10) / 100;
         artist.safeTransferETH(_toParentOrArtist);
         if (parent != address(0)) parent.safeTransferETH(_toParentOrArtist);
         _fundDestination.safeTransferETH(threshold - (2 * _toParentOrArtist));
-        (bool _success, address _plantoid) = _spawner.spawnPlantoid(
+        bytes memory initData = abi.encodeWithSignature(
+            "init(address,address,address,string,string,string,uint256[2],uint256[3])",
             _newPlantoid,
             payable(msg.sender),
             payable(address(this)),
-            _thresholds,
-            _periods,
             _plantoidName,
             _plantoidSymbol,
-            _prerevealUri
+            _prerevealUri,
+            _thresholds,
+            _periods
         );
-        if (!_success) revert FailedToSpawn();
+        salt++;
+        address _plantoid = _spawner.spawnPlantoid(bytes32(salt), initData);
         emit NewSpawn(
             _round,
             address(_spawner),
@@ -419,11 +490,12 @@ contract Plantoid is ERC721Enumerable, Initializable {
             "Cannot send ETH to dead plantoid"
         );
 
-        if (msg.value < depositThreshold) revert ThresholdNotReached();
-        _tokenIds += 1;
+        if (msg.value >= depositThreshold) {
+            _tokenIds += 1;
 
-        emit Deposit(msg.value, msg.sender, _tokenIds);
-        _mint(msg.sender, _tokenIds); /*Mint unrevealed token to sender*/
+            emit Deposit(msg.value, msg.sender, _tokenIds);
+            _mint(address(this), msg.sender, _tokenIds); /*Mint unrevealed token to sender*/
+        }
     }
 
     /// @dev Reveal NFT content for a supporter NFT
@@ -467,61 +539,83 @@ contract Plantoid is ERC721Enumerable, Initializable {
     }
 }
 
-contract CloneFactory {
-    function createClone(address payable target)
-        internal
-        returns (address payable result)
-    {
-        // eip-1167 proxy pattern adapted for payable platoid spawner
-        bytes20 targetBytes = bytes20(address(target));
-        assembly {
-            let clone := mload(0x40)
-            mstore(
-                clone,
-                0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000
-            )
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(
-                add(clone, 0x28),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-            result := create(0, clone, 0x37)
-        }
-    }
-}
-
-contract PlantoidSpawn is CloneFactory, IPlantoidSpawner {
+contract PlantoidSpawn is IPlantoidSpawner {
     address payable public immutable template; // fixed template using eip-1167 proxy pattern
 
-    event PlantoidSpawned(address indexed plantoid, address indexed artist);
+    event PlantoidSpawned(address indexed plantoid);
 
     constructor(address payable _template) {
         template = _template;
     }
 
-    // add a generic data bytes field so people can make new templates
-    function spawnPlantoid(
-        address _plantoidAddr,
-        address payable _artist,
-        address payable _parent,
-        uint256[2] memory _thresholds,
-        uint256[4] calldata _periods,
-        string memory _name,
-        string memory _symbol,
-        string memory _prerevealUri
-    ) external override returns (bool, address) {
-        Plantoid _plantoid = Plantoid(createClone(template));
-        _plantoid.init(
-            _plantoidAddr,
-            _artist,
-            _parent,
-            _thresholds,
-            _periods,
-            _name,
-            _symbol,
-            _prerevealUri
+    function plantoidAddress(address by, bytes32 salt)
+        external
+        view
+        returns (address addr, bool exists)
+    {
+        addr = Clones.predictDeterministicAddress(
+            template,
+            _saltedSalt(by, salt),
+            address(this)
         );
-        emit PlantoidSpawned(address(_plantoid), _artist);
-        return (true, address(_plantoid));
+        exists = addr.code.length > 0;
+    }
+
+    function spawnPlantoid(bytes32 salt, bytes calldata initData)
+        external
+        returns (address payable newPlantoid)
+    {
+        // Create Plantoid proxy
+        newPlantoid = payable(
+            Clones.cloneDeterministic(template, _saltedSalt(msg.sender, salt))
+        );
+
+        // Initialize proxy.
+        assembly {
+            // Grab the free memory pointer.
+            let m := mload(0x40)
+            // Copy the `initData` to the free memory.
+            calldatacopy(m, initData.offset, initData.length)
+            // Call the initializer, and revert if the call fails.
+            if iszero(
+                call(
+                    gas(), // Gas remaining.
+                    newPlantoid, // Address of the plantoid.
+                    0, // `msg.value` of the call: 0 ETH.
+                    m, // Start of input.
+                    initData.length, // Length of input.
+                    0x00, // Start of output. Not used.
+                    0x00 // Size of output. Not used.
+                )
+            ) {
+                // Bubble up the revert if the call reverts.
+                returndatacopy(0x00, 0x00, returndatasize())
+                revert(0x00, returndatasize())
+            }
+        }
+
+        emit PlantoidSpawned(newPlantoid);
+    }
+
+    /**
+     * @dev Returns the salted salt.
+     *      To prevent griefing and accidental collisions from clients that don't
+     *      generate their salt properly.
+     * @param by   The caller of the {createSoundAndMints} function.
+     * @param salt The salt, generated on the client side.
+     * @return result The computed value.
+     */
+    function _saltedSalt(address by, bytes32 salt)
+        internal
+        pure
+        returns (bytes32 result)
+    {
+        assembly {
+            // Store the variables into the scratch space.
+            mstore(0x00, by)
+            mstore(0x20, salt)
+            // Equivalent to `keccak256(abi.encode(by, salt))`.
+            result := keccak256(0x00, 0x40)
+        }
     }
 }

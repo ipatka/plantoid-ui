@@ -1,7 +1,7 @@
 import { store, Bytes, BigInt } from '@graphprotocol/graph-ts'
 import { ProposalSubmitted, Transfer, Voted, VotingStarted } from '../generated/templates/Plantoid/Plantoid'
 import { PlantoidSpawned } from '../generated/PlantoidSpawn/PlantoidSpawn'
-import { Seed, Holder, Proposal, PlantoidInstance, Vote } from '../generated/schema'
+import { Seed, Holder, Proposal, PlantoidInstance, Vote, Round } from '../generated/schema'
 import { Plantoid } from '../generated/templates'
 
 export function handleNewPlantoid(event: PlantoidSpawned): void {
@@ -84,7 +84,8 @@ export function handleSeedTransfer(event: Transfer): void {
 export function handleProposalSubmitted(event: ProposalSubmitted): void {
     let from = event.params.proposer.toHex()
     let uri = event.params.proposalUri
-    let id = event.params.round.toHexString() + '_' + event.params.proposalId.toHexString()
+    let roundId = event.address.toHexString() + '_' + event.params.round.toHexString()
+    let id = event.address.toHexString() + '_' + event.params.round.toHexString() + '_' + event.params.proposalId.toHexString()
 
     let proposer = Holder.load(from)
     if (proposer === null) {
@@ -93,26 +94,32 @@ export function handleProposalSubmitted(event: ProposalSubmitted): void {
         proposer.seedCount = ZERO
         proposer.createdAt = event.block.timestamp
     }
-    
+
     proposer.save()
+
+    let round = Round.load(roundId)
+    if (round === null) {
+        round = new Round(roundId)
+        round.save()
+    }
 
     let proposal = new Proposal(id)
     proposal.proposer = from
     proposal.voteCount = ZERO
     proposal.uri = uri
-    proposal.round = event.params.round.toHexString()
+    proposal.round = roundId
     proposal.vetoed = false
     proposal.proposalId = event.params.proposalId
-    
+
     proposal.save()
 }
 
 export function handleVoted(event: Voted): void {
     let from = event.params.voter.toHex()
-    let round = event.params.round.toHexString()
-    let tokenId = event.params.tokenId.toHexString()
+    let roundId = event.address.toHexString() + '_' + event.params.round.toHexString()
+    let votes = event.params.votes
     let choice = event.params.choice.toHexString()
-    let id = round + '_' + tokenId + '_' + choice
+    let id = roundId + '_' + from
 
     let proposalId = event.params.round.toHexString() + '_' + event.params.choice.toHexString()
 
@@ -123,40 +130,24 @@ export function handleVoted(event: Voted): void {
         voter.seedCount = ZERO
         voter.createdAt = event.block.timestamp
     }
-    
+
     voter.save()
 
     let vote = new Vote(id)
     vote.voter = from
-    vote.round = round
+    vote.round = roundId
     vote.proposal = proposalId
-    vote.seed = tokenId
-    
+    vote.eligibleVotes = votes
+
     vote.save()
 }
 
-// export function handleVotingStarted(event: VotingStarted): void {
-//     let round = event.params.round.toHexString()
-//     let end = event.params.end
+export function handleVotingStarted(event: VotingStarted): void {
+    let round = event.params.round.toHexString()
+    let end = event.params.end
 
-//     let proposalId = event.params.round.toHexString() + '_' + event.params.choice.toHexString()
+    let newRound = new Round(round)
+    // newRound.votingEnd = end
 
-//     let voter = Holder.load(from)
-//     if (voter === null) {
-//         voter = new Holder(from)
-//         voter.address = event.params.voter
-//         voter.seedCount = ZERO
-//         voter.createdAt = event.block.timestamp
-//     }
-    
-//     voter.save()
-
-//     let vote = new Vote(id)
-//     vote.voter = from
-//     vote.round = event.params.round
-//     vote.proposal = proposalId
-//     vote.seed = tokenId
-    
-//     vote.save()
-// }
-
+    newRound.save()
+}

@@ -84,7 +84,7 @@ export default function Proposals({
 const submitProposal = async (plantoidAddress, userSigner, msg) => {
   try {
     const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, userSigner);
-    await plantoid.submitProposal(0, msg);
+    await plantoid.submitProposal(msg);
   } catch (error) {
     console.log({ error });
   }

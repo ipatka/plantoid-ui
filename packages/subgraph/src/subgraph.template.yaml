@@ -47,5 +47,5 @@ dataSources:
         - name: PlantoidSpawn
           file: ./abis/localhost_PlantoidSpawn.json
       eventHandlers:
-        - event: PlantoidSpawned(indexed address,indexed address)
+        - event: PlantoidSpawned(indexed address)
           handler: handleNewPlantoid

@@ -2,17 +2,6 @@
 
 const { ethers } = require("hardhat");
 
-const getNewPlantoidAddress = async (tx) => {
-  const receipt = await ethers.provider.getTransactionReceipt(tx.hash);
-  let plantoidSummonAbi = [
-    "event PlantoidSpawned(address indexed plantoid, address indexed artist)",
-  ];
-  let iface = new ethers.utils.Interface(plantoidSummonAbi);
-  let log = iface.parseLog(receipt.logs[0]);
-  const { plantoid } = log.args;
-  return plantoid;
-};
-
 // const sleep = (ms) =>
 //   new Promise((r) =>
 //     setTimeout(() => {
@@ -31,10 +20,9 @@ const config = {
   name: "Plantoid",
   prereveal: "preveal",
   symbol: "LIFE",
+  proposalPeriod: 1000,
   votingPeriod: 1000,
   gracePeriod: 500,
-  settlePeriod: 300,
-  extPeriod: 200,
 };
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
@@ -47,33 +35,47 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     log: true,
     waitConfirmations: 0,
   });
-  console.log({ tx });
   const tx2 = await deploy("PlantoidSpawn", {
     from: deployer,
     args: [tx.receipt.contractAddress],
     log: true,
     waitConfirmations: 0,
   });
+  const plantoid = await ethers.getContractAt(
+    "Plantoid",
+    tx.receipt.contractAddress
+  ); //<-- if you want to instantiate a version of a contract at a specific address!
   const plantoidSpawn = await ethers.getContractAt(
     "PlantoidSpawn",
     tx2.receipt.contractAddress
   ); //<-- if you want to instantiate a version of a contract at a specific address!
-  const tx3 = await plantoidSpawn.spawnPlantoid(
+  const initAction = plantoid.interface.encodeFunctionData("init", [
     config.plantoidOracleAddress,
     config.artistAddress,
     config.parentAddress,
-    [config.depositThreshold, config.threshold],
-    [
-      config.votingPeriod,
-      config.gracePeriod,
-      config.settlePeriod,
-      config.extPeriod,
-    ],
     config.name,
     config.symbol,
-    config.prereveal
+    config.prereveal,
+    ethers.utils.defaultAbiCoder.encode(
+      ["uint256", "uint256", "uint256", "uint256", "uint256"],
+      [
+        config.depositThreshold,
+        config.threshold,
+        config.proposalPeriod,
+        config.votingPeriod,
+        config.gracePeriod,
+      ]
+    ),
+  ]);
+  const salt = ethers.utils.keccak256(
+    ethers.utils.defaultAbiCoder.encode(["uint256"], [1])
   );
-  const plantoidAddress = await getNewPlantoidAddress(tx3);
+  console.log({deployer})
+  await plantoidSpawn.spawnPlantoid(salt, initAction);
+  const plantoidAddress = await plantoidSpawn.plantoidAddress(
+    deployer,
+    salt
+  );
   // const tx = await deploy("TipRelayer", {
   //   from: deployer,
   //   args: [

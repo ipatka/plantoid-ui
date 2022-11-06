@@ -802,6 +802,31 @@ const PlantoidABI = [
   },
   {
     inputs: [],
+    name: "AlreadyVoting",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "CannotAdvance",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "CannotSubmitProposal",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "CannotVeto",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "FailedToSendETH",
+    type: "error",
+  },
+  {
+    inputs: [],
     name: "FailedToSpawn",
     type: "error",
   },
@@ -838,6 +863,11 @@ const PlantoidABI = [
   {
     inputs: [],
     name: "NotWinner",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "StillProposing",
     type: "error",
   },
   {
@@ -914,6 +944,56 @@ const PlantoidABI = [
     anonymous: false,
     inputs: [
       {
+        indexed: true,
+        internalType: "address",
+        name: "delegator",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "fromDelegate",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "toDelegate",
+        type: "address",
+      },
+    ],
+    name: "DelegateChanged",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "delegate",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "previousBalance",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "newBalance",
+        type: "uint256",
+      },
+    ],
+    name: "DelegateVotesChanged",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         indexed: false,
         internalType: "uint256",
         name: "amount",
@@ -933,6 +1013,19 @@ const PlantoidABI = [
       },
     ],
     name: "Deposit",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint8",
+        name: "version",
+        type: "uint8",
+      },
+    ],
+    name: "Initialized",
     type: "event",
   },
   {
@@ -1002,6 +1095,25 @@ const PlantoidABI = [
     inputs: [
       {
         indexed: false,
+        internalType: "uint256",
+        name: "round",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "end",
+        type: "uint256",
+      },
+    ],
+    name: "ProposalStarted",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
         internalType: "address",
         name: "proposer",
         type: "address",
@@ -1011,6 +1123,12 @@ const PlantoidABI = [
         internalType: "string",
         name: "proposalUri",
         type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "round",
+        type: "uint256",
       },
       {
         indexed: false,
@@ -1033,24 +1151,50 @@ const PlantoidABI = [
       },
       {
         indexed: false,
-        internalType: "address",
-        name: "settler",
-        type: "address",
-      },
-      {
-        indexed: false,
         internalType: "uint256",
         name: "proposal",
         type: "uint256",
       },
+    ],
+    name: "ProposalVetoed",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
       {
         indexed: false,
         internalType: "uint256",
-        name: "end",
+        name: "tokenId",
         type: "uint256",
       },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "uri",
+        type: "string",
+      },
     ],
-    name: "ProposalVetoed",
+    name: "Revealed",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "round",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "enum Plantoid.RoundState",
+        name: "state",
+        type: "uint8",
+      },
+    ],
+    name: "RoundAdvanced",
     type: "event",
   },
   {
@@ -1090,6 +1234,12 @@ const PlantoidABI = [
       {
         indexed: false,
         internalType: "uint256",
+        name: "votes",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
         name: "round",
         type: "uint256",
       },
@@ -1121,6 +1271,39 @@ const PlantoidABI = [
     ],
     name: "VotingStarted",
     type: "event",
+  },
+  {
+    inputs: [],
+    name: "DELEGATION_TYPEHASH",
+    outputs: [
+      {
+        internalType: "bytes32",
+        name: "",
+        type: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "DOMAIN_TYPEHASH",
+    outputs: [
+      {
+        internalType: "bytes32",
+        name: "",
+        type: "bytes32",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "advanceRound",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
   },
   {
     inputs: [
@@ -1173,6 +1356,35 @@ const PlantoidABI = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+      {
+        internalType: "uint32",
+        name: "",
+        type: "uint32",
+      },
+    ],
+    name: "checkpoints",
+    outputs: [
+      {
+        internalType: "uint32",
+        name: "fromBlock",
+        type: "uint32",
+      },
+      {
+        internalType: "uint96",
+        name: "votes",
+        type: "uint96",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "contractURI",
     outputs: [
@@ -1180,6 +1392,89 @@ const PlantoidABI = [
         internalType: "string",
         name: "",
         type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "decimals",
+    outputs: [
+      {
+        internalType: "uint8",
+        name: "",
+        type: "uint8",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "delegatee",
+        type: "address",
+      },
+    ],
+    name: "delegate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "delegatee",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "nonce",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "expiry",
+        type: "uint256",
+      },
+      {
+        internalType: "uint8",
+        name: "v",
+        type: "uint8",
+      },
+      {
+        internalType: "bytes32",
+        name: "r",
+        type: "bytes32",
+      },
+      {
+        internalType: "bytes32",
+        name: "s",
+        type: "bytes32",
+      },
+    ],
+    name: "delegateBySig",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "delegator",
+        type: "address",
+      },
+    ],
+    name: "delegates",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
       },
     ],
     stateMutability: "view",
@@ -1234,6 +1529,62 @@ const PlantoidABI = [
     inputs: [
       {
         internalType: "address",
+        name: "account",
+        type: "address",
+      },
+    ],
+    name: "getCurrentVotes",
+    outputs: [
+      {
+        internalType: "uint96",
+        name: "",
+        type: "uint96",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "account",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "blockNumber",
+        type: "uint256",
+      },
+    ],
+    name: "getPriorVotes",
+    outputs: [
+      {
+        internalType: "uint96",
+        name: "",
+        type: "uint96",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "gracePeriod",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
         name: "_plantoid",
         type: "address",
       },
@@ -1246,16 +1597,6 @@ const PlantoidABI = [
         internalType: "address payable",
         name: "_parent",
         type: "address",
-      },
-      {
-        internalType: "uint256[2]",
-        name: "_thresholds",
-        type: "uint256[2]",
-      },
-      {
-        internalType: "uint256[4]",
-        name: "_periods",
-        type: "uint256[4]",
       },
       {
         internalType: "string",
@@ -1271,6 +1612,11 @@ const PlantoidABI = [
         internalType: "string",
         name: "_prerevealUri",
         type: "string",
+      },
+      {
+        internalType: "bytes",
+        name: "_thresholdsAndPeriods",
+        type: "bytes",
       },
     ],
     name: "init",
@@ -1303,25 +1649,6 @@ const PlantoidABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_round",
-        type: "uint256",
-      },
-    ],
-    name: "maxVotes",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "_maxVotes",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "name",
     outputs: [
@@ -1329,6 +1656,44 @@ const PlantoidABI = [
         internalType: "string",
         name: "",
         type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "nonces",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "numCheckpoints",
+    outputs: [
+      {
+        internalType: "uint32",
+        name: "",
+        type: "uint32",
       },
     ],
     stateMutability: "view",
@@ -1393,53 +1758,13 @@ const PlantoidABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "proposalCounter",
+    inputs: [],
+    name: "proposalPeriod",
     outputs: [
       {
         internalType: "uint256",
         name: "",
         type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "proposals",
-    outputs: [
-      {
-        internalType: "address",
-        name: "proposer",
-        type: "address",
-      },
-      {
-        internalType: "string",
-        name: "proposalUri",
-        type: "string",
-      },
-      {
-        internalType: "bool",
-        name: "vetoed",
-        type: "bool",
       },
     ],
     stateMutability: "view",
@@ -1495,6 +1820,79 @@ const PlantoidABI = [
         internalType: "uint256",
         name: "",
         type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_round",
+        type: "uint256",
+      },
+    ],
+    name: "roundState",
+    outputs: [
+      {
+        internalType: "enum Plantoid.RoundState",
+        name: "state",
+        type: "uint8",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "rounds",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "roundStart",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "proposalEnd",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "votingEnd",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "graceEnd",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "proposalCount",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "totalVotes",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "winningProposal",
+        type: "uint256",
+      },
+      {
+        internalType: "enum Plantoid.RoundState",
+        name: "roundState",
+        type: "uint8",
       },
     ],
     stateMutability: "view",
@@ -1570,45 +1968,10 @@ const PlantoidABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_round",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "_winningProposal",
-        type: "uint256",
-      },
-      {
-        internalType: "bool",
-        name: "_veto",
-        type: "bool",
-      },
-    ],
-    name: "settle",
+    inputs: [],
+    name: "settleRound",
     outputs: [],
     stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "bytes32",
-        name: "",
-        type: "bytes32",
-      },
-    ],
-    name: "signatureUsed",
-    outputs: [
-      {
-        internalType: "bool",
-        name: "",
-        type: "bool",
-      },
-    ],
-    stateMutability: "view",
     type: "function",
   },
   {
@@ -1634,9 +1997,9 @@ const PlantoidABI = [
         type: "uint256[2]",
       },
       {
-        internalType: "uint256[4]",
+        internalType: "uint256[3]",
         name: "_periods",
-        type: "uint256[4]",
+        type: "uint256[3]",
       },
       {
         internalType: "string",
@@ -1687,9 +2050,9 @@ const PlantoidABI = [
         type: "uint256[2]",
       },
       {
-        internalType: "uint256[4]",
+        internalType: "uint256[3]",
         name: "_periods",
-        type: "uint256[4]",
+        type: "uint256[3]",
       },
       {
         internalType: "string",
@@ -1714,18 +2077,26 @@ const PlantoidABI = [
   },
   {
     inputs: [],
-    name: "startVoting",
+    name: "spawner",
+    outputs: [
+      {
+        internalType: "contract IPlantoidSpawner",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "startProposals",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
   },
   {
     inputs: [
-      {
-        internalType: "uint256",
-        name: "_round",
-        type: "uint256",
-      },
       {
         internalType: "string",
         name: "_proposalUri",
@@ -1741,18 +2112,8 @@ const PlantoidABI = [
     inputs: [
       {
         internalType: "uint256",
-        name: "_round",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
         name: "_proposal",
         type: "uint256",
-      },
-      {
-        internalType: "uint256[]",
-        name: "_votingTokenIds",
-        type: "uint256[]",
       },
     ],
     name: "submitVote",
@@ -1907,21 +2268,49 @@ const PlantoidABI = [
     inputs: [
       {
         internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "",
+        name: "_proposal",
         type: "uint256",
       },
     ],
-    name: "voted",
+    name: "vetoProposal",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_round",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_proposal",
+        type: "uint256",
+      },
+    ],
+    name: "viewProposals",
     outputs: [
       {
         internalType: "uint256",
-        name: "",
+        name: "votes",
         type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "proposer",
+        type: "address",
+      },
+      {
+        internalType: "bool",
+        name: "vetoed",
+        type: "bool",
+      },
+      {
+        internalType: "string",
+        name: "uri",
+        type: "string",
       },
     ],
     stateMutability: "view",
@@ -1930,22 +2319,17 @@ const PlantoidABI = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
+        internalType: "address",
+        name: "delegator",
+        type: "address",
       },
     ],
-    name: "votes",
+    name: "votesToDelegate",
     outputs: [
       {
-        internalType: "uint256",
+        internalType: "uint96",
         name: "",
-        type: "uint256",
+        type: "uint96",
       },
     ],
     stateMutability: "view",
@@ -1971,14 +2355,8 @@ const PlantoidABI = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "winningProposal",
+    inputs: [],
+    name: "votingPeriod",
     outputs: [
       {
         internalType: "uint256",
@@ -2008,7 +2386,7 @@ module.exports = {
   31337: {
     contracts: {
       plantoid: {
-        address: "0xCafac3dD18aC6c6e92c921884f9E4176737C052c",
+        address: "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E",
         abi: PlantoidABI,
       },
     },

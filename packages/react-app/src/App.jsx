@@ -95,6 +95,35 @@ function App(props) {
   const [selectedNetwork, setSelectedNetwork] = useState(networkOptions[0]);
 
   const location = useLocation();
+  // const EXAMPLE_GRAPHQL = `query getPlantoid($address: String)
+  // {
+  //   seeds {
+  //     id
+  //     holder {
+  //       address
+  //       seedCount
+  //     }
+  //     tokenId
+  //     revealed
+  //   }
+  //   holders {
+  //     address
+  //     seedCount
+  //   }
+  //   proposals {
+  //     round
+  //     id
+  //     proposalId
+  //     uri
+  //   }
+  //   holder(id: $address) {
+  //     seeds {
+  //       tokenId
+  //     }
+  //     seedCount
+  //   }
+  // }
+  // `;
   const EXAMPLE_GRAPHQL = `query getPlantoid($address: String)
   {
     seeds {
@@ -106,28 +135,33 @@ function App(props) {
       tokenId
       revealed
     }
-    holders {
-      address
-      seedCount
-    }
-    proposals {
-      round
-      id
-      proposalId
-      uri
-    }
-    holder(id: $address) {
-      seeds {
-        tokenId
-      }
-      seedCount
-    }
+     holders {
+         address
+         seedCount
+     }
+        holder(id: $address) {
+           seeds {
+             tokenId
+           }
+           seedCount
+         }
+         proposals {
+          id
+          round {
+            id
+          }
+        proposalId
+        uri
+        }
   }
   `;
   const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
-  const { loading, error, data } = useQuery(EXAMPLE_GQL, { pollInterval: 2500, variables: {address: address ? address.toLowerCase() : ZERO_ADDRESS}});
+  const { loading, error, data } = useQuery(EXAMPLE_GQL, {
+    pollInterval: 2500,
+    variables: { address: address ? address.toLowerCase() : ZERO_ADDRESS },
+  });
 
-  console.log(error, data);
+  console.log({ error, data });
 
   const feedPlantoid = async plantoidAddress => {
     try {
@@ -137,11 +171,11 @@ function App(props) {
     }
   };
 
-  const startVoting = async () => {
+  const startProposals = async () => {
     try {
       // const plantoid = new ethers.Contract(plantoidAddress, PlantoidABI, localProvider);
       // await plantoid.startVoting();
-      await writeContracts.plantoid.startVoting();
+      await writeContracts.plantoid.startProposals();
     } catch (error) {
       console.log({ error });
     }
@@ -211,6 +245,7 @@ function App(props) {
   // const contractConfig = useContractConfig();
 
   const contractConfig = { deployedContracts: deployedContracts || {}, externalContracts: externalContracts || {} };
+  console.log({ contractConfig });
 
   // Load in your local 📝 contract and read a value from it:
   const readContracts = useContractLoader(localProvider, contractConfig);
@@ -240,6 +275,11 @@ function App(props) {
   console.log({ artist });
 
   const round = useContractReader(readContracts, "plantoid", "round");
+  const roundState = useContractReader(readContracts, "plantoid", "roundState", [0]);
+
+  const plantoidAddressRead = readContracts?.plantoid?.address;
+
+  console.log({ round, roundState, plantoidAddressRead });
 
   console.log("NUMBER OF IDss---------- " + data?.seeds.length);
 
@@ -321,7 +361,7 @@ function App(props) {
 
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
-  const plantoidAddress = "0xCafac3dD18aC6c6e92c921884f9E4176737C052c";
+  const plantoidAddress = "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E";
   const plantoidBalance = useBalance(localProvider, plantoidAddress);
 
   const events = useEventListener(readContracts, "plantoid", "Deposit", localProvider, 10983913);
@@ -386,6 +426,9 @@ function App(props) {
         <Menu.Item key="/subgraph">
           <Link to="/subgraph">Subgraph</Link>
         </Menu.Item>
+        <Menu.Item key="/contracts">
+          <Link to="/contracts">Contracts</Link>
+        </Menu.Item>
       </Menu>
 
       <Switch>
@@ -436,14 +479,14 @@ function App(props) {
               <Button
                 disabled={plantoidBalance < threshold}
                 onClick={() => {
-                  startVoting();
+                  startProposals();
                 }}
               >
                 Start submissions
               </Button>{" "}
               <br />
               <Divider />
-              {round ? (
+              {roundState > 0 ? (
                 <Proposals
                   plantoidAddress={plantoidAddress}
                   userSigner={userSigner}
@@ -488,6 +531,23 @@ function App(props) {
             tx={tx}
             writeContracts={writeContracts}
             mainnetProvider={mainnetProvider}
+          />
+        </Route>
+        <Route exact path="/contracts">
+          {/*
+                🎛 this scaffolding is full of commonly used components
+                this <Contract/> component will automatically parse your ABI
+                and give you a form to interact with it locally
+            */}
+
+          <Contract
+            name="Plantoid"
+            price={price}
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+            contractConfig={contractConfig}
           />
         </Route>
       </Switch>
