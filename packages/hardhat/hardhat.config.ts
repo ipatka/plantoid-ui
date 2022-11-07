@@ -14,6 +14,10 @@ import "solidity-coverage";
 
 import { task } from 'hardhat/config'
 
+import './tasks/itx-gas-tank'
+import './tasks/itx-deposit'
+import './tasks/itx-demo'
+
 /*
       📡 This is where you configure your deploy configuration for 🏗 scaffold-eth
 
@@ -124,7 +128,7 @@ const networks = {
     },
     matic: {
         url: 'https://rpc-mainnet.maticvigil.com/',
-        gasPrice: 1000000000,
+        gasPrice: 250000000000,
         accounts: {
             mnemonic: mnemonic(),
         },
@@ -290,6 +294,7 @@ module.exports = {
         apiKey: {
             mainnet: 'DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW',
             rinkeby: 'DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW',
+            goerli: 'DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW',
             // add other network's API key here
         },
     },

@@ -2413,6 +2413,14 @@ module.exports = {
       },
     },
   },
+  5: {
+    contracts: {
+      plantoid: {
+        address: "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d",
+        abi: PlantoidABI,
+      },
+    },
+  },
   31337: {
     contracts: {
       plantoid: {

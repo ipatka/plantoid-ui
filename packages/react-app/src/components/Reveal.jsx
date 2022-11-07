@@ -17,7 +17,8 @@ export default function Reveal({ address, userSigner, user, graphData, round, ro
     console.log("value is:", event.target.value);
   };
 
-  const plantoidMetadataAddress = '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0' // TODO fetch from query
+  // const plantoidMetadataAddress = '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0' // TODO fetch from query
+  const plantoidMetadataAddress = '0xB36d0593c0659996611e854b1d7797bF7829BbEE' // TODO fetch from query
   const plantoidAddress = graphData?.plantoidInstance.id;
 
   const oracleColumns = [

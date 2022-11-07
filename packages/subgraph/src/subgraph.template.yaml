@@ -4,7 +4,7 @@ schema:
 templates:
   - name: Plantoid
     kind: ethereum/contract
-    network: localhost
+    network: goerli
     source:
       abi: Plantoid
     mapping:
@@ -20,7 +20,7 @@ templates:
         - Round
       abis:
         - name: Plantoid
-          file: ./abis/localhost_Plantoid.json
+          file: ./abis/goerli_Plantoid.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,indexed uint256) 
           handler: handleSeedTransfer
@@ -47,9 +47,9 @@ templates:
 dataSources:
   - kind: ethereum/contract
     name: PlantoidMetadata
-    network: localhost
+    network: goerli
     source:
-      address: "{{localhost_PlantoidMetadataAddress}}"
+      address: "{{goerli_PlantoidMetadataAddress}}"
       abi: PlantoidMetadata
     mapping:
       kind: ethereum/events
@@ -60,15 +60,15 @@ dataSources:
         - Seed
       abis:
         - name: PlantoidMetadata
-          file: ./abis/localhost_PlantoidMetadata.json
+          file: ./abis/goerli_PlantoidMetadata.json
       eventHandlers:
         - event: MetadataRevealed(address,uint256,string,bytes)
           handler: handleMetadataReveal
   - kind: ethereum/contract
     name: PlantoidSpawn
-    network: localhost
+    network: goerli
     source:
-      address: "{{localhost_PlantoidSpawnAddress}}"
+      address: "{{goerli_PlantoidSpawnAddress}}"
       abi: PlantoidSpawn
     mapping:
       kind: ethereum/events
@@ -79,7 +79,7 @@ dataSources:
         - Spawner
       abis:
         - name: PlantoidSpawn
-          file: ./abis/localhost_PlantoidSpawn.json
+          file: ./abis/goerli_PlantoidSpawn.json
       eventHandlers:
         - event: PlantoidSpawned(indexed address)
           handler: handleNewPlantoid

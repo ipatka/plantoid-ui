@@ -12,14 +12,14 @@ const { ethers } = require("hardhat");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 
 const config = {
-  plantoidOracleAddress: "0x744222844bFeCC77156297a6427B5876A6769e19",
-  artistAddress: "0x775aF9b7c214Fe8792aB5f5da61a8708591d517E",
+  plantoidOracleAddress: "0x1f028f240A90414211425bFa38eB4917Cb32c39C",
+  artistAddress: "0x1f028f240A90414211425bFa38eB4917Cb32c39C",
   parentAddress: zeroAddress,
   depositThreshold: ethers.utils.parseEther("0.0001"),
   threshold: ethers.utils.parseEther("0.001"),
   name: "Plantoid",
   prereveal: "preveal",
-  symbol: "LIFE",
+  symbol: "PLANT",
   proposalPeriod: 100,
   votingPeriod: 100,
   gracePeriod: 100,
@@ -33,19 +33,19 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     from: deployer,
     args: [],
     log: true,
-    waitConfirmations: 0,
+    waitConfirmations: 2,
   });
   const tx2 = await deploy("PlantoidSpawn", {
     from: deployer,
     args: [tx.receipt.contractAddress],
     log: true,
-    waitConfirmations: 0,
+    waitConfirmations: 2,
   });
   const tx3 = await deploy("PlantoidMetadata", {
     from: deployer,
     args: [],
     log: true,
-    waitConfirmations: 0,
+    waitConfirmations: 2,
   });
   const plantoid = await ethers.getContractAt(
     "Plantoid",
@@ -59,7 +59,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     "PlantoidMetadata",
     tx3.receipt.contractAddress
   ); //<-- if you want to instantiate a version of a contract at a specific address!
-  await plantoidMetadata.transferOwnership(config.plantoidOracleAddress)
+  await plantoidMetadata.transferOwnership(config.plantoidOracleAddress);
   const initAction = plantoid.interface.encodeFunctionData("init", [
     config.plantoidOracleAddress,
     config.artistAddress,
@@ -81,12 +81,9 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const salt = ethers.utils.keccak256(
     ethers.utils.defaultAbiCoder.encode(["uint256"], [1])
   );
-  console.log({deployer})
+  console.log({ deployer });
   await plantoidSpawn.spawnPlantoid(salt, initAction);
-  const plantoidAddress = await plantoidSpawn.plantoidAddress(
-    deployer,
-    salt
-  );
+  const plantoidAddress = await plantoidSpawn.plantoidAddress(deployer, salt);
   // const tx = await deploy("TipRelayer", {
   //   from: deployer,
   //   args: [
