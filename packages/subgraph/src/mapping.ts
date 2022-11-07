@@ -1,5 +1,18 @@
-import { store, Bytes, BigInt } from '@graphprotocol/graph-ts'
-import { ProposalSubmitted, Transfer, Voted, VotingStarted } from '../generated/templates/Plantoid/Plantoid'
+import { store, Bytes, log, BigInt } from '@graphprotocol/graph-ts'
+import {
+    GraceStarted,
+    NewPlantoid,
+    ProposalAccepted,
+    ProposalStarted,
+    ProposalSubmitted,
+    ProposalVetoed,
+    Revealed,
+    RoundInvalidated,
+    Transfer,
+    Voted,
+    VotingStarted,
+} from '../generated/templates/Plantoid/Plantoid'
+import { MetadataRevealed } from '../generated/PlantoidMetadata/PlantoidMetadata'
 import { PlantoidSpawned } from '../generated/PlantoidSpawn/PlantoidSpawn'
 import { Seed, Holder, Proposal, PlantoidInstance, Vote, Round } from '../generated/schema'
 import { Plantoid } from '../generated/templates'
@@ -12,6 +25,16 @@ export function handleNewPlantoid(event: PlantoidSpawned): void {
     let newPlantoid = new PlantoidInstance(newAddress)
     newPlantoid.save()
 }
+
+export function handlePlantoidInitialized(event: NewPlantoid): void {
+    let plantoidInstance = PlantoidInstance.load(event.address.toHexString())
+    if (!plantoidInstance) log.warning('Invalid instance', [])
+    else {
+        plantoidInstance.oracle = event.params.oracle
+        plantoidInstance.save()
+    }
+}
+
 let ZERO_ADDRESS_STRING = '0x0000000000000000000000000000000000000000'
 
 let ZERO_ADDRESS: Bytes = Bytes.fromHexString(ZERO_ADDRESS_STRING) as Bytes
@@ -39,7 +62,7 @@ export function handleSeedTransfer(event: Transfer): void {
     // let contract = Plantoid.bind(event.address)
     let from = event.params.from.toHex()
     let to = event.params.to.toHex()
-    let id = event.params.tokenId.toHexString()
+    let id = event.address.toHexString() + '_' + event.params.tokenId.toHexString()
 
     if (from != ZERO_ADDRESS_STRING) {
         let sender = Holder.load(from)
@@ -81,6 +104,32 @@ export function handleSeedTransfer(event: Transfer): void {
     }
 }
 
+export function handleMetadataReveal(event: MetadataRevealed): void {
+    log.info('Handling metadata', [])
+    let plantoidAddress = event.params.plantoid
+    let seedId = plantoidAddress.toHexString() + '_' + event.params.tokenId.toHexString()
+    let seed = Seed.load(seedId)
+    if (!seed) log.warning('invalid seed', [])
+    else {
+        seed.revealedSignature = event.params.signature
+        seed.revealedUri = event.params.tokenUri
+        seed.save()
+    }
+}
+
+export function handleReveal(event: Revealed): void {
+    log.info('Handling on chain reveal', [])
+    let plantoidAddress = event.address
+    let seedId = plantoidAddress.toHexString() + '_' + event.params.tokenId.toHexString()
+    let seed = Seed.load(seedId)
+    if (!seed) log.warning('invalid seed', [])
+    else {
+        seed.uri = event.params.uri
+        seed.revealed = true
+        seed.save()
+    }
+}
+
 export function handleProposalSubmitted(event: ProposalSubmitted): void {
     let from = event.params.proposer.toHex()
     let uri = event.params.proposalUri
@@ -98,56 +147,132 @@ export function handleProposalSubmitted(event: ProposalSubmitted): void {
     proposer.save()
 
     let round = Round.load(roundId)
-    if (round === null) {
-        round = new Round(roundId)
-        round.save()
+    if (!round) log.warning('Invalid vote round', [])
+    else {
+        let proposal = new Proposal(id)
+        proposal.proposer = from
+        proposal.voteCount = ZERO
+        proposal.uri = uri
+        proposal.round = roundId
+        proposal.vetoed = false
+        proposal.proposalId = event.params.proposalId
+
+        proposal.save()
     }
-
-    let proposal = new Proposal(id)
-    proposal.proposer = from
-    proposal.voteCount = ZERO
-    proposal.uri = uri
-    proposal.round = roundId
-    proposal.vetoed = false
-    proposal.proposalId = event.params.proposalId
-
-    proposal.save()
 }
 
 export function handleVoted(event: Voted): void {
     let from = event.params.voter.toHex()
     let roundId = event.address.toHexString() + '_' + event.params.round.toHexString()
     let votes = event.params.votes
-    let choice = event.params.choice.toHexString()
     let id = roundId + '_' + from
 
-    let proposalId = event.params.round.toHexString() + '_' + event.params.choice.toHexString()
+    let proposalId = event.address.toHexString() + '_' + event.params.round.toHexString() + '_' + event.params.choice.toHexString()
 
-    let voter = Holder.load(from)
-    if (voter === null) {
-        voter = new Holder(from)
-        voter.address = event.params.voter
-        voter.seedCount = ZERO
-        voter.createdAt = event.block.timestamp
+    let round = Round.load(roundId)
+    if (!round) log.warning('Invalid vote round', [])
+    else {
+        let proposal = Proposal.load(proposalId)
+        if (!proposal) log.warning('Invalid proposal round', [])
+        else {
+            round.totalVotes = round.totalVotes.plus(votes)
+            round.save()
+
+            proposal.voteCount = proposal.voteCount.plus(votes)
+            proposal.save()
+
+            let voter = Holder.load(from)
+            if (voter === null) {
+                voter = new Holder(from)
+                voter.address = event.params.voter
+                voter.seedCount = ZERO
+                voter.createdAt = event.block.timestamp
+            }
+
+            voter.save()
+
+            let vote = new Vote(id)
+            vote.voter = from
+            vote.round = roundId
+            vote.proposal = proposalId
+            vote.eligibleVotes = votes
+
+            vote.save()
+        }
     }
+}
 
-    voter.save()
+export function handleVetoed(event: ProposalVetoed): void {
+    let proposalId = event.address.toHexString() + '_' + event.params.round.toHexString() + '_' + event.params.proposal.toHexString()
+    let proposal = Proposal.load(proposalId)
+    if (proposal === null) log.warning('Invalid proposal', [])
+    else {
+        proposal.vetoed = false
 
-    let vote = new Vote(id)
-    vote.voter = from
-    vote.round = roundId
-    vote.proposal = proposalId
-    vote.eligibleVotes = votes
+        proposal.save()
+    }
+}
+export function handleProposalStarted(event: ProposalStarted): void {
+    let roundId = event.address.toHexString() + '_' + event.params.round.toHexString()
+    let end = event.params.end
 
-    vote.save()
+    let round = Round.load(roundId)
+    if (round === null) {
+        round = new Round(roundId)
+        round.totalVotes = ZERO
+    }
+    round.proposalEnd = end
+
+    round.save()
 }
 
 export function handleVotingStarted(event: VotingStarted): void {
-    let round = event.params.round.toHexString()
+    let roundId = event.address.toHexString() + '_' + event.params.round.toHexString()
     let end = event.params.end
 
-    let newRound = new Round(round)
-    // newRound.votingEnd = end
+    let round = Round.load(roundId)
+    if (!round) log.warning('Invalid round', [])
+    else {
+        round.votingEnd = end
 
-    newRound.save()
+        round.save()
+    }
+}
+
+export function handleGraceStarted(event: GraceStarted): void {
+    let roundId = event.address.toHexString() + '_' + event.params.round.toHexString()
+    let end = event.params.end
+
+    let round = Round.load(roundId)
+    if (!round) log.warning('Invalid round', [])
+    else {
+        round.graceEnd = end
+
+        round.save()
+    }
+}
+
+export function handleProposalAccepted(event: ProposalAccepted): void {
+    let roundId = event.address.toHexString() + '_' + event.params.round.toHexString()
+    let acceptedProposal = event.address.toHexString() + '_' + event.params.round.toHexString() + '_' + event.params.proposal.toHexString()
+
+    let round = Round.load(roundId)
+    if (!round) log.warning('Invalid round', [])
+    else {
+        round.winningProposal = acceptedProposal
+
+        round.save()
+    }
+}
+
+export function handleRoundInvalidated(event: RoundInvalidated): void {
+    let roundId = event.address.toHexString() + '_' + event.params.round.toHexString()
+
+    let round = Round.load(roundId)
+    if (!round) log.warning('Invalid round', [])
+    else {
+        round.invalidated = true
+
+        round.save()
+    }
 }

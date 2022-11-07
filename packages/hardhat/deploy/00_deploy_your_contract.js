@@ -12,7 +12,7 @@ const { ethers } = require("hardhat");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 
 const config = {
-  plantoidOracleAddress: "0x775aF9b7c214Fe8792aB5f5da61a8708591d517E",
+  plantoidOracleAddress: "0x744222844bFeCC77156297a6427B5876A6769e19",
   artistAddress: "0x775aF9b7c214Fe8792aB5f5da61a8708591d517E",
   parentAddress: zeroAddress,
   depositThreshold: ethers.utils.parseEther("0.0001"),
@@ -20,9 +20,9 @@ const config = {
   name: "Plantoid",
   prereveal: "preveal",
   symbol: "LIFE",
-  proposalPeriod: 1000,
-  votingPeriod: 1000,
-  gracePeriod: 500,
+  proposalPeriod: 100,
+  votingPeriod: 100,
+  gracePeriod: 100,
 };
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
@@ -41,6 +41,12 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     log: true,
     waitConfirmations: 0,
   });
+  const tx3 = await deploy("PlantoidMetadata", {
+    from: deployer,
+    args: [],
+    log: true,
+    waitConfirmations: 0,
+  });
   const plantoid = await ethers.getContractAt(
     "Plantoid",
     tx.receipt.contractAddress
@@ -49,6 +55,11 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
     "PlantoidSpawn",
     tx2.receipt.contractAddress
   ); //<-- if you want to instantiate a version of a contract at a specific address!
+  const plantoidMetadata = await ethers.getContractAt(
+    "PlantoidMetadata",
+    tx3.receipt.contractAddress
+  ); //<-- if you want to instantiate a version of a contract at a specific address!
+  await plantoidMetadata.transferOwnership(config.plantoidOracleAddress)
   const initAction = plantoid.interface.encodeFunctionData("init", [
     config.plantoidOracleAddress,
     config.artistAddress,

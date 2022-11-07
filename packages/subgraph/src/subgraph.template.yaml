@@ -17,6 +17,7 @@ templates:
         - Holder
         - Proposal
         - Vote
+        - Round
       abis:
         - name: Plantoid
           file: ./abis/localhost_Plantoid.json
@@ -27,9 +28,42 @@ templates:
           handler: handleProposalSubmitted
         - event: Voted(address,uint256,uint256,uint256) 
           handler: handleVoted
-        # - event: VotingStarted(uint256,uint256) 
-        #   handler: handleVotingStarted
+        - event: ProposalVetoed(uint256,uint256) 
+          handler: handleVetoed
+        - event: ProposalStarted(uint256,uint256) 
+          handler: handleProposalStarted
+        - event: VotingStarted(uint256,uint256) 
+          handler: handleVotingStarted
+        - event: GraceStarted(uint256,uint256) 
+          handler: handleGraceStarted
+        - event: ProposalAccepted(uint256,uint256) 
+          handler: handleProposalAccepted
+        - event: RoundInvalidated(uint256) 
+          handler: handleRoundInvalidated
+        - event: NewPlantoid(address) 
+          handler: handlePlantoidInitialized
+        - event: Revealed(uint256,string) 
+          handler: handleReveal
 dataSources:
+  - kind: ethereum/contract
+    name: PlantoidMetadata
+    network: localhost
+    source:
+      address: "{{localhost_PlantoidMetadataAddress}}"
+      abi: PlantoidMetadata
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.5
+      language: wasm/assemblyscript
+      file: ./src/mapping.ts
+      entities:
+        - Seed
+      abis:
+        - name: PlantoidMetadata
+          file: ./abis/localhost_PlantoidMetadata.json
+      eventHandlers:
+        - event: MetadataRevealed(address,uint256,string,bytes)
+          handler: handleMetadataReveal
   - kind: ethereum/contract
     name: PlantoidSpawn
     network: localhost

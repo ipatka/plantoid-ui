@@ -1020,6 +1020,25 @@ const PlantoidABI = [
     inputs: [
       {
         indexed: false,
+        internalType: "uint256",
+        name: "round",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "end",
+        type: "uint256",
+      },
+    ],
+    name: "GraceStarted",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
         internalType: "uint8",
         name: "version",
         type: "uint8",
@@ -1076,9 +1095,9 @@ const PlantoidABI = [
     inputs: [
       {
         indexed: false,
-        internalType: "address",
-        name: "settler",
-        type: "address",
+        internalType: "uint256",
+        name: "round",
+        type: "uint256",
       },
       {
         indexed: false,
@@ -1187,14 +1206,8 @@ const PlantoidABI = [
         name: "round",
         type: "uint256",
       },
-      {
-        indexed: false,
-        internalType: "enum Plantoid.RoundState",
-        name: "state",
-        type: "uint8",
-      },
     ],
-    name: "RoundAdvanced",
+    name: "RoundInvalidated",
     type: "event",
   },
   {
@@ -1392,6 +1405,24 @@ const PlantoidABI = [
         internalType: "string",
         name: "",
         type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "currentRoundState",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "_round",
+        type: "uint256",
+      },
+      {
+        internalType: "enum Plantoid.RoundState",
+        name: "_state",
+        type: "uint8",
       },
     ],
     stateMutability: "view",
@@ -2372,7 +2403,6 @@ const PlantoidABI = [
     type: "receive",
   },
 ];
-
 // Mainnet DAI, Optimism and Arbitrium Rollup Contracts with local addresses
 module.exports = {
   4: {

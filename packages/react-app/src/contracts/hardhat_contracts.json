@@ -3231,12 +3231,17 @@
       "chainId": "31337",
       "contracts": {
         "Plantoid": {
-          "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+          "address": "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E",
           "abi": [
             {
               "inputs": [],
               "stateMutability": "nonpayable",
               "type": "constructor"
+            },
+            {
+              "inputs": [],
+              "name": "AlreadyDistributed",
+              "type": "error"
             },
             {
               "inputs": [],
@@ -3474,6 +3479,38 @@
                 },
                 {
                   "indexed": false,
+                  "internalType": "uint256",
+                  "name": "end",
+                  "type": "uint256"
+                }
+              ],
+              "name": "GraceStarted",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
+                  "internalType": "address",
+                  "name": "oracle",
+                  "type": "address"
+                }
+              ],
+              "name": "NewPlantoid",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "round",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
                   "internalType": "address",
                   "name": "spawner",
                   "type": "address"
@@ -3482,12 +3519,6 @@
                   "indexed": false,
                   "internalType": "address",
                   "name": "newPlantoid",
-                  "type": "address"
-                },
-                {
-                  "indexed": false,
-                  "internalType": "address",
-                  "name": "fundDestination",
                   "type": "address"
                 },
                 {
@@ -3511,9 +3542,9 @@
               "inputs": [
                 {
                   "indexed": false,
-                  "internalType": "address",
-                  "name": "settler",
-                  "type": "address"
+                  "internalType": "uint256",
+                  "name": "round",
+                  "type": "uint256"
                 },
                 {
                   "indexed": false,
@@ -3621,15 +3652,9 @@
                   "internalType": "uint256",
                   "name": "round",
                   "type": "uint256"
-                },
-                {
-                  "indexed": false,
-                  "internalType": "enum Plantoid.RoundState",
-                  "name": "state",
-                  "type": "uint8"
                 }
               ],
-              "name": "RoundAdvanced",
+              "name": "RoundInvalidated",
               "type": "event"
             },
             {
@@ -3827,6 +3852,24 @@
                   "internalType": "string",
                   "name": "",
                   "type": "string"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "currentRoundState",
+              "outputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "_round",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "enum IPlantoid.RoundState",
+                  "name": "_state",
+                  "type": "uint8"
                 }
               ],
               "stateMutability": "view",
@@ -4271,7 +4314,7 @@
               "name": "roundState",
               "outputs": [
                 {
-                  "internalType": "enum Plantoid.RoundState",
+                  "internalType": "enum IPlantoid.RoundState",
                   "name": "state",
                   "type": "uint8"
                 }
@@ -4325,7 +4368,12 @@
                   "type": "uint256"
                 },
                 {
-                  "internalType": "enum Plantoid.RoundState",
+                  "internalType": "bool",
+                  "name": "fundsDistributed",
+                  "type": "bool"
+                },
+                {
+                  "internalType": "enum IPlantoid.RoundState",
                   "name": "roundState",
                   "type": "uint8"
                 }
@@ -4385,6 +4433,19 @@
               "type": "function"
             },
             {
+              "inputs": [],
+              "name": "salt",
+              "outputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "",
+                  "type": "uint256"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
               "inputs": [
                 {
                   "internalType": "address",
@@ -4422,19 +4483,29 @@
                   "type": "address"
                 },
                 {
-                  "internalType": "address payable",
-                  "name": "_fundDestination",
-                  "type": "address"
+                  "internalType": "uint256",
+                  "name": "_depositThreshold",
+                  "type": "uint256"
                 },
                 {
-                  "internalType": "uint256[2]",
-                  "name": "_thresholds",
-                  "type": "uint256[2]"
+                  "internalType": "uint256",
+                  "name": "_roundThreshold",
+                  "type": "uint256"
                 },
                 {
-                  "internalType": "uint256[3]",
-                  "name": "_periods",
-                  "type": "uint256[3]"
+                  "internalType": "uint256",
+                  "name": "_proposalPeriod",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "_votingPeriod",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "_gracePeriod",
+                  "type": "uint256"
                 },
                 {
                   "internalType": "string",
@@ -4453,7 +4524,13 @@
                 }
               ],
               "name": "spawn",
-              "outputs": [],
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "_plantoid",
+                  "type": "address"
+                }
+              ],
               "stateMutability": "nonpayable",
               "type": "function"
             },
@@ -4475,19 +4552,29 @@
                   "type": "address"
                 },
                 {
-                  "internalType": "address payable",
-                  "name": "_fundDestination",
-                  "type": "address"
+                  "internalType": "uint256",
+                  "name": "_depositThreshold",
+                  "type": "uint256"
                 },
                 {
-                  "internalType": "uint256[2]",
-                  "name": "_thresholds",
-                  "type": "uint256[2]"
+                  "internalType": "uint256",
+                  "name": "_roundThreshold",
+                  "type": "uint256"
                 },
                 {
-                  "internalType": "uint256[3]",
-                  "name": "_periods",
-                  "type": "uint256[3]"
+                  "internalType": "uint256",
+                  "name": "_proposalPeriod",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "_votingPeriod",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "_gracePeriod",
+                  "type": "uint256"
                 },
                 {
                   "internalType": "string",
@@ -4506,7 +4593,13 @@
                 }
               ],
               "name": "spawnCustom",
-              "outputs": [],
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "_plantoid",
+                  "type": "address"
+                }
+              ],
               "stateMutability": "nonpayable",
               "type": "function"
             },
@@ -4899,6 +4992,122 @@
                 }
               ],
               "stateMutability": "view",
+              "type": "function"
+            }
+          ]
+        },
+        "PlantoidMetadata": {
+          "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+          "abi": [
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
+                  "internalType": "address",
+                  "name": "plantoid",
+                  "type": "address"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "uint256",
+                  "name": "tokenId",
+                  "type": "uint256"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "string",
+                  "name": "tokenUri",
+                  "type": "string"
+                },
+                {
+                  "indexed": false,
+                  "internalType": "bytes",
+                  "name": "signature",
+                  "type": "bytes"
+                }
+              ],
+              "name": "MetadataRevealed",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferred",
+              "type": "event"
+            },
+            {
+              "inputs": [],
+              "name": "owner",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "renounceOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "plantoid",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "tokenId",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "string",
+                  "name": "tokenUri",
+                  "type": "string"
+                },
+                {
+                  "internalType": "bytes",
+                  "name": "signature",
+                  "type": "bytes"
+                }
+              ],
+              "name": "revealMetadata",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "transferOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
               "type": "function"
             }
           ]

@@ -16,50 +16,6 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     using SafeTransferLib for address payable;
     using ECDSA for bytes32; /*ECDSA for signature recovery for license mints*/
 
-    event Deposit(uint256 amount, address sender, uint256 indexed tokenId);
-    event Revealed(uint256 tokenId, string uri);
-    event ProposalSubmitted(
-        address proposer,
-        string proposalUri,
-        uint256 round,
-        uint256 proposalId
-    );
-    event ProposalStarted(uint256 round, uint256 end);
-    event VotingStarted(uint256 round, uint256 end);
-    event Voted(address voter, uint256 votes, uint256 round, uint256 choice);
-    event ProposalVetoed(uint256 round, uint256 proposal);
-    event ProposalAccepted(address settler, uint256 proposal);
-    event NewSpawn(
-        uint256 round,
-        address spawner,
-        address newPlantoid,
-        address fundDestination,
-        string name,
-        string symbol
-    );
-    event RoundAdvanced(uint256 round, RoundState state);
-
-    struct Proposal {
-        uint256 votes;
-        address proposer;
-        bool vetoed;
-        string uri;
-    }
-
-    struct Round {
-        uint256 roundStart;
-        uint256 proposalEnd;
-        uint256 votingEnd;
-        uint256 graceEnd;
-        uint256 proposalCount;
-        uint256 totalVotes;
-        uint256 winningProposal;
-        mapping(uint256 => Proposal) proposals;
-        /// @notice Whether or not a vote has been cast
-        mapping(address => bool) hasVoted;
-        RoundState roundState;
-    }
-
     function viewProposals(uint256 _round, uint256 _proposal)
         public
         view
@@ -74,6 +30,15 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         proposer = rounds[_round].proposals[_proposal].proposer;
         vetoed = rounds[_round].proposals[_proposal].vetoed;
         uri = rounds[_round].proposals[_proposal].uri;
+    }
+
+    function currentRoundState()
+        public
+        view
+        returns (uint256 _round, RoundState _state)
+    {
+        _round = round;
+        _state = roundState(_round);
     }
 
     function roundState(uint256 _round) public view returns (RoundState state) {
@@ -94,17 +59,6 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         } else return rounds[_round].roundState;
     }
 
-    enum RoundState {
-        Pending,
-        Proposal,
-        Voting,
-        Grace,
-        Completed,
-        Invalid,
-        NeedsAdvancement,
-        NeedsSettlement
-    }
-
     mapping(uint256 => bool) public revealed; /*Track if plantoid has revealed the NFT*/
 
     string public prerevealUri; /*Before reveal, render a default NFT image*/
@@ -120,10 +74,6 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
 
     mapping(uint256 => Round) public rounds; /* round => round state*/
 
-    // mapping(uint256 => mapping(uint256 => uint256)) public voted; /* spawn count => token ID => chosen proposalId */
-    // /*NOTE proposal IDs start at 1 so 0 counts as not voted*/
-    // mapping(uint256 => mapping(uint256 => uint256)) public votes; /* spawn count => proposal Id => votes*/
-
     uint256 public round; /* Track active voting round*/
     address payable public parent; /* Parent plantoid contract*/
     address payable public artist; /* Store artist for this plantoid*/
@@ -132,7 +82,7 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     uint256 public votingPeriod; /*Time during which holders can vote for active proposals*/
     uint256 public gracePeriod; /*Time between voting ended and when vote can settle*/
 
-    uint256 salt;
+    uint256 public salt;
 
     /*****************
     Minting state mgmt
@@ -178,6 +128,7 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         prerevealUri = _prerevealUri;
         spawner = IPlantoidSpawner(msg.sender); /*Initialize interface to spawner*/
         _setParameters(_thresholdsAndPeriods);
+        emit NewPlantoid(_plantoid);
     }
 
     function _setParameters(bytes calldata _thresholdsAndPeriods) internal {
@@ -259,6 +210,7 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
             } else {
                 currentRound.roundState = RoundState.Voting;
                 currentRound.votingEnd = block.timestamp + votingPeriod;
+                emit VotingStarted(round, currentRound.votingEnd);
             }
         } else if (
             (currentRound.roundState == RoundState.Voting) &&
@@ -270,6 +222,7 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
             } else {
                 currentRound.roundState = RoundState.Grace;
                 currentRound.graceEnd = block.timestamp + gracePeriod;
+                emit GraceStarted(round, currentRound.votingEnd);
             }
         } else {
             revert CannotAdvance();
@@ -280,7 +233,7 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         Round storage currentRound = rounds[round];
         currentRound.roundState = RoundState.Invalid;
         escrow -= threshold;
-        emit RoundAdvanced(round, currentRound.roundState);
+        emit RoundInvalidated(round);
         round++;
     }
 
@@ -324,11 +277,33 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
                 invalidateRound();
             } else {
                 currentRound.roundState = RoundState.Completed;
+                emit ProposalAccepted(round, currentRound.winningProposal);
+                _transferFundsToArtist(round);
                 round++;
-                emit RoundAdvanced(round, currentRound.roundState);
             }
         } else {
             revert CannotAdvance();
+        }
+    }
+
+    function _transferFundsToArtist(uint256 _round) internal {
+        Round storage currentRound = rounds[_round];
+        if (currentRound.fundsDistributed) revert AlreadyDistributed();
+        else {
+            currentRound.fundsDistributed = true;
+            uint256 _fundsToDistribute = escrow;
+            escrow -= threshold; /*Reduce escrow balance*/
+
+            uint256 _toParentOrArtist = (threshold * 10) / 100;
+            _fundsToDistribute -= _toParentOrArtist;
+            artist.safeTransferETH(_toParentOrArtist);
+            if (parent != address(0)) {
+                _fundsToDistribute -= _toParentOrArtist;
+                parent.safeTransferETH(_toParentOrArtist);
+            }
+            payable(
+                currentRound.proposals[currentRound.winningProposal].proposer
+            ).safeTransferETH(_fundsToDistribute);
         }
     }
 
@@ -342,9 +317,6 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         currentRound.proposals[currentRound.proposalCount].proposer = msg
             .sender;
         currentRound.proposalCount++;
-
-        // revert LogThis(currentRound.proposals[currentRound.proposalCount - 1].proposer, _proposalUri);
-        // revert LogThis(msg.sender, currentRound.proposals);
 
         emit ProposalSubmitted(
             msg.sender,
@@ -382,23 +354,29 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     function spawn(
         uint256 _round,
         address _newPlantoid,
-        address payable _fundDestination,
-        uint256[2] memory _thresholds,
-        uint256[3] memory _periods,
+        uint256 _depositThreshold,
+        uint256 _roundThreshold,
+        uint256 _proposalPeriod,
+        uint256 _votingPeriod,
+        uint256 _gracePeriod,
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
-    ) external {
-        _spawn(
+    ) external returns (address _plantoid){
+        _plantoid = _spawn(
             _round,
             spawner,
             _newPlantoid,
-            _fundDestination,
-            _thresholds,
-            _periods,
             _plantoidName,
             _plantoidSymbol,
-            _prerevealUri
+            _prerevealUri,
+            abi.encode(
+                _depositThreshold,
+                _roundThreshold,
+                _proposalPeriod,
+                _votingPeriod,
+                _gracePeriod
+            )
         );
     }
 
@@ -412,23 +390,29 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         uint256 _round,
         IPlantoidSpawner _newPlantoidSpawner,
         address _newPlantoid,
-        address payable _fundDestination,
-        uint256[2] memory _thresholds,
-        uint256[3] memory _periods,
+        uint256 _depositThreshold,
+        uint256 _roundThreshold,
+        uint256 _proposalPeriod,
+        uint256 _votingPeriod,
+        uint256 _gracePeriod,
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
-    ) external {
-        _spawn(
+    ) external returns (address _plantoid){
+        _plantoid = _spawn(
             _round,
             _newPlantoidSpawner,
             _newPlantoid,
-            _fundDestination,
-            _thresholds,
-            _periods,
             _plantoidName,
             _plantoidSymbol,
-            _prerevealUri
+            _prerevealUri,
+            abi.encode(
+                _depositThreshold,
+                _roundThreshold,
+                _proposalPeriod,
+                _votingPeriod,
+                _gracePeriod
+            )
         );
     }
 
@@ -441,41 +425,32 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         uint256 _round,
         IPlantoidSpawner _spawner,
         address _newPlantoid,
-        address payable _fundDestination,
-        uint256[2] memory _thresholds,
-        uint256[3] memory _periods,
         string memory _plantoidName,
         string memory _plantoidSymbol,
-        string memory _prerevealUri
-    ) internal {
+        string memory _prerevealUri,
+        bytes memory _periodsAndThresholds
+    ) internal returns (address _plantoid){
         Round storage currentRound = rounds[_round];
         if (
             (currentRound.proposals[currentRound.winningProposal].proposer !=
                 msg.sender) || (currentRound.roundState != RoundState.Completed)
         ) revert NotWinner();
-        escrow -= threshold; /*Reduce escrow balance*/
-        uint256 _toParentOrArtist = (threshold * 10) / 100;
-        artist.safeTransferETH(_toParentOrArtist);
-        if (parent != address(0)) parent.safeTransferETH(_toParentOrArtist);
-        _fundDestination.safeTransferETH(threshold - (2 * _toParentOrArtist));
         bytes memory initData = abi.encodeWithSignature(
-            "init(address,address,address,string,string,string,uint256[2],uint256[3])",
+            "init(address,address,address,string,string,string,bytes)",
             _newPlantoid,
             payable(msg.sender),
             payable(address(this)),
             _plantoidName,
             _plantoidSymbol,
             _prerevealUri,
-            _thresholds,
-            _periods
+            _periodsAndThresholds
         );
         salt++;
-        address _plantoid = _spawner.spawnPlantoid(bytes32(salt), initData);
+        _plantoid = _spawner.spawnPlantoid(bytes32(salt), initData);
         emit NewSpawn(
             _round,
             address(_spawner),
             _plantoid,
-            _fundDestination,
             _plantoidName,
             _plantoidSymbol
         );

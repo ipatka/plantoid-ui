@@ -46,6 +46,7 @@ import { useStaticJsonRPC } from "./hooks";
 import { ZERO_ADDRESS } from "./components/Swap";
 
 import { safeSignTypedData, encodeMultiSend, MetaTransaction } from "@gnosis.pm/safe-contracts";
+import Reveal from "./components/Reveal";
 
 const { ethers, BigNumber } = require("ethers");
 
@@ -95,73 +96,6 @@ function App(props) {
   const [selectedNetwork, setSelectedNetwork] = useState(networkOptions[0]);
 
   const location = useLocation();
-  // const EXAMPLE_GRAPHQL = `query getPlantoid($address: String)
-  // {
-  //   seeds {
-  //     id
-  //     holder {
-  //       address
-  //       seedCount
-  //     }
-  //     tokenId
-  //     revealed
-  //   }
-  //   holders {
-  //     address
-  //     seedCount
-  //   }
-  //   proposals {
-  //     round
-  //     id
-  //     proposalId
-  //     uri
-  //   }
-  //   holder(id: $address) {
-  //     seeds {
-  //       tokenId
-  //     }
-  //     seedCount
-  //   }
-  // }
-  // `;
-  const EXAMPLE_GRAPHQL = `query getPlantoid($address: String)
-  {
-    seeds {
-      id
-      holder {
-        address
-        seedCount
-      }
-      tokenId
-      revealed
-    }
-     holders {
-         address
-         seedCount
-     }
-        holder(id: $address) {
-           seeds {
-             tokenId
-           }
-           seedCount
-         }
-         proposals {
-          id
-          round {
-            id
-          }
-        proposalId
-        uri
-        }
-  }
-  `;
-  const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
-  const { loading, error, data } = useQuery(EXAMPLE_GQL, {
-    pollInterval: 2500,
-    variables: { address: address ? address.toLowerCase() : ZERO_ADDRESS },
-  });
-
-  console.log({ error, data });
 
   const feedPlantoid = async plantoidAddress => {
     try {
@@ -253,6 +187,71 @@ function App(props) {
   // If you want to make 🔐 write transactions to your contracts, use the userSigner:
   const writeContracts = useContractLoader(userSigner, contractConfig, localChainId);
 
+  const roundAndState = useContractReader(readContracts, "plantoid", "currentRoundState");
+  const round = roundAndState?._round;
+  const roundState = roundAndState?._state;
+  console.log({ roundAndState, round, roundState });
+
+  const plantoidAddress = "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E".toLowerCase();
+
+  const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String)
+  {
+    seeds {
+      id
+      holder {
+        address
+        seedCount
+      }
+      tokenId
+      uri
+      revealed
+      revealedUri
+      revealedSignature
+    }
+    holders {
+      address
+      seedCount
+    }
+    round (id: $roundId) {
+      id
+      proposals {
+        id
+        proposalId
+        voteCount
+        uri
+      }
+      proposalEnd
+      votingEnd
+      graceEnd
+      totalVotes
+      winningProposal {
+        id
+        proposer
+      }
+    }
+    holder(id: $address) {
+      seeds {
+        tokenId
+      }
+      seedCount
+    }
+    plantoidInstance(id: $plantoidAddress) {
+      id
+      oracle
+    }
+  }
+  `;
+  const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
+  const { loading, error, data } = useQuery(EXAMPLE_GQL, {
+    pollInterval: 2500,
+    variables: {
+      address: address ? address.toLowerCase() : ZERO_ADDRESS,
+      roundId: round ? plantoidAddress + "_0x" + round : 0,
+      plantoidAddress,
+    },
+  });
+
+  console.log({ error, data });
   // EXTERNAL CONTRACT EXAMPLE:
   //
   // If you want to bring in the mainnet DAI contract it would look like:
@@ -273,9 +272,6 @@ function App(props) {
   const artist = useContractReader(readContracts, "plantoid", "artist");
 
   console.log({ artist });
-
-  const round = useContractReader(readContracts, "plantoid", "round");
-  const roundState = useContractReader(readContracts, "plantoid", "roundState", [0]);
 
   const plantoidAddressRead = readContracts?.plantoid?.address;
 
@@ -361,7 +357,6 @@ function App(props) {
 
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
-  const plantoidAddress = "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E";
   const plantoidBalance = useBalance(localProvider, plantoidAddress);
 
   const events = useEventListener(readContracts, "plantoid", "Deposit", localProvider, 10983913);
@@ -420,8 +415,8 @@ function App(props) {
         <Menu.Item key="/">
           <Link to="/">Feed</Link>
         </Menu.Item>
-        <Menu.Item key="/claim">
-          <Link to="/claim">Claim</Link>
+        <Menu.Item key="/reveal">
+          <Link to="/reveal">Reveal</Link>
         </Menu.Item>
         <Menu.Item key="/subgraph">
           <Link to="/subgraph">Subgraph</Link>
@@ -476,14 +471,16 @@ function App(props) {
               >
                 Feed
               </Button>
-              <Button
-                disabled={plantoidBalance < threshold}
-                onClick={() => {
-                  startProposals();
-                }}
-              >
-                Start submissions
-              </Button>{" "}
+              {roundState === 0 && plantoidBalance >= threshold && (
+                <Button
+                  disabled={plantoidBalance < threshold}
+                  onClick={() => {
+                    startProposals();
+                  }}
+                >
+                  Start submissions
+                </Button>
+              )}
               <br />
               <Divider />
               {roundState > 0 ? (
@@ -493,6 +490,7 @@ function App(props) {
                   user={address}
                   graphData={data}
                   round={round}
+                  roundState={roundState}
                 />
               ) : (
                 <br></br>
@@ -517,13 +515,18 @@ function App(props) {
             </div>
           </div>
         </Route>
-        <Route exact path="/claim">
+        <Route exact path="/reveal">
           {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
-          <div>
-            <div style={{ border: "1px solid #cccccc", padding: 16, width: 400, margin: "auto", marginTop: 64 }}>
-              <h2>Tx Signer:</h2>
-            </div>
-          </div>
+          <Reveal
+          address={address}
+            plantoidAddress={plantoidAddress}
+            userSigner={userSigner}
+            user={address}
+            graphData={data}
+            round={round}
+            roundState={roundState}
+            mainnetProvider={mainnetProvider}
+          ></Reveal>
         </Route>
         <Route path="/subgraph">
           <Subgraph
@@ -540,6 +543,15 @@ function App(props) {
                 and give you a form to interact with it locally
             */}
 
+          <Contract
+            name="PlantoidMetadata"
+            price={price}
+            signer={userSigner}
+            provider={localProvider}
+            address={address}
+            blockExplorer={blockExplorer}
+            contractConfig={contractConfig}
+          />
           <Contract
             name="Plantoid"
             price={price}
