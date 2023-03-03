@@ -1,6 +1,7 @@
 import { Button, Col, Menu, Row, Input, Divider, List, Image } from "antd";
 import "antd/dist/antd.css";
 import { gql, useQuery } from "@apollo/client";
+import Confetti from 'react-confetti'
 import {
   useBalance,
   useContractLoader,
@@ -362,6 +363,15 @@ function App(props) {
   const plantoidBalance = useBalance(localProvider, plantoidAddress);
 
   const events = useEventListener(readContracts, "plantoid", "Deposit", localProvider, 10983913);
+  console.log('events', events)
+  const [feedCelebration, setFeedCelebration] = useState(false)
+  useEffect(() => {
+    console.log('new event')
+    setFeedCelebration(true)
+    setTimeout(() => {
+      setFeedCelebration(false)
+    }, 10000)
+  }, [events])
 
   return (
     <div className="App">
@@ -430,6 +440,86 @@ function App(props) {
 
       <Switch>
         <Route exact path="/">
+            <div style={{width: 640, height: 400, margin: "0 auto", marginTop: 20}}>
+            <div style={{width: "100%", height: "100%", position: "relative"}}>
+              {(feedCelebration) && (
+                <div style={{position: "absolute", width:"100%", height:"100%"}}>
+                  <Confetti width="640" height="400"
+                    drawShape={ctx => {
+                      ctx.beginPath()
+                      for(let i = 0; i < 22; i++) {
+                        const angle = 0.35 * i
+                        const x = 7 * Math.cos(angle) / (1 + Math.sin(angle) * Math.sin(angle))
+                        const y = 7 * Math.cos(angle) * Math.sin(angle) / (1 + Math.sin(angle) * Math.sin(angle))
+                        ctx.lineTo(x, y)
+                      }
+                      ctx.stroke()
+                      ctx.closePath()
+                  }}/>
+                </div>
+              )}
+              <div className="FeedBar">
+                <div style={{width: 60, padding: 20, right: 0, position: "absolute", height: "100%", display: "flex", flexDirection: "column"}}>
+                  <div style={{height: "22%", background: "cyan", opacity: "0.3"}}></div>
+                  <div style={{height: "78%", background: "magenta", opacity: "0.9"}}></div>
+                </div>
+                <div style={{width: 45, right: 5, position: "absolute", height: 3, background: "magenta", top: 100, borderRadius: "4"}}></div>
+              </div>
+              <div style={{position: "absolute", right: 5, color: "black", fontSize: 10}}>
+                Current balance: {ethers.utils.formatEther(plantoidBalance.toString())} <br />
+                Required threshold: {threshold ? ethers.utils.formatEther(threshold.toString()) : "???"} <br />
+                Currently in escrow: {escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}
+              </div>
+              <div className="FeedInput">
+                <EtherInput
+                  price={price}
+                  placeholder="Feed me"
+                  value={txValue}
+                  onChange={value => {
+                    setTxValue(value);
+                  }}
+                />
+                <Button
+                  disabled={!txValue}
+                  onClick={() => {
+                    /* look how we call setPurpose AND send some value along */
+                    feedPlantoid(plantoidAddress);
+                    /* this will fail until you make the setPurpose function payable */
+                  }}
+                >
+                  Feed
+                </Button>
+              </div>
+              <iframe
+                style={{width: "inherit", height: "inherit"}}
+                title="Plantoid high res" frameborder="0" allowfullscreen
+                mozallowfullscreen="true" webkitallowfullscreen="true"
+                allow="autoplay; fullscreen; xr-spatial-tracking"
+                xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share
+                src="https://sketchfab.com/models/217f3d21ef19463982e78fee34c26409/embed">
+              </iframe>
+              <div className="FeedFooter">
+                <div>
+                  <span style={{marginRight: 5}}>Plantoid</span>
+                  <Address
+                    address={plantoidAddress}
+                    ensProvider={mainnetProvider}
+                    blockExplorer={blockExplorer}
+                    fontSize={12} />
+                </div>
+                <div>
+                  <span style={{marginRight: 5}}>Artist</span>
+                  <Address
+                    address={artist}
+                    ensProvider={mainnetProvider}
+                    blockExplorer={blockExplorer}
+                    fontSize={12} />
+                </div>
+              </div>
+          </div>
+          </div>
+        </Route>
+        <Route exact path="/old">
           {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
           <div>
             <div style={{ border: "1px solid #cccccc", padding: 16, width: 400, margin: "auto", marginTop: 64 }}>
