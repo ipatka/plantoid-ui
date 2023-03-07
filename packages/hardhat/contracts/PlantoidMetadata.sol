@@ -23,7 +23,7 @@ contract PlantoidMetadata is Ownable {
         uint256 tokenId,
         string calldata tokenUri,
         bytes calldata signature
-    ) external onlyOwner {
+    ) external {
         bytes32 _digest = keccak256(
             abi.encodePacked(tokenId, tokenUri, plantoid)
         );

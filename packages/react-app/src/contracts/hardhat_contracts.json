@@ -3231,7 +3231,7 @@
       "chainId": "5",
       "contracts": {
         "Plantoid": {
-          "address": "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d",
+          "address": "0x1C147bc1BD3811c1E4B2a1526457151A624b5A98",
           "abi": [
             {
               "inputs": [],
@@ -4902,7 +4902,7 @@
           ]
         },
         "PlantoidMetadata": {
-          "address": "0xB36d0593c0659996611e854b1d7797bF7829BbEE",
+          "address": "0x583f3c2C3D52679576CaFeE3aAE06CDA4C25347b",
           "abi": [
             {
               "anonymous": false,
