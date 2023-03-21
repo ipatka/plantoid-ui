@@ -18,8 +18,8 @@ const config = {
   depositThreshold: ethers.utils.parseEther("0.0001"),
   threshold: ethers.utils.parseEther("0.001"),
   name: "Plantoid",
-  prereveal: "preveal",
-  symbol: "PLANT",
+  prereveal: "ipfs://QmXTzn3ZMvsYnfJKXcKQ2PVHH2YNbdUDED1GM2DEuMHmzH",
+  symbol: "PLANTOID",
   proposalPeriod: 100,
   votingPeriod: 100,
   gracePeriod: 100,
@@ -28,71 +28,73 @@ const config = {
 module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
+  
+  console.log({deployer})
 
-  // const tx = await deploy("Plantoid", {
-  //   from: deployer,
-  //   args: [],
-  //   log: true,
-  //   waitConfirmations: 2,
-  // });
-  // const tx2 = await deploy("PlantoidSpawn", {
-  //   from: deployer,
-  //   args: [tx.receipt.contractAddress],
-  //   log: true,
-  //   waitConfirmations: 2,
-  // });
+  const tx = await deploy("Plantoid", {
+    from: deployer,
+    args: [],
+    log: true,
+    waitConfirmations: 2,
+  });
+  const tx2 = await deploy("PlantoidSpawn", {
+    from: deployer,
+    args: [tx.receipt.contractAddress],
+    log: true,
+    waitConfirmations: 2,
+  });
   const tx3 = await deploy("PlantoidMetadata", {
     from: deployer,
     args: [],
     log: true,
     waitConfirmations: 2,
   });
-  // const plantoid = await ethers.getContractAt(
-  //   "Plantoid",
-  //   tx.receipt.contractAddress
-  // ); //<-- if you want to instantiate a version of a contract at a specific address!
-  // const plantoidSpawn = await ethers.getContractAt(
-  //   "PlantoidSpawn",
-  //   tx2.receipt.contractAddress
-  // ); //<-- if you want to instantiate a version of a contract at a specific address!
+  const plantoid = await ethers.getContractAt(
+    "Plantoid",
+    tx.receipt.contractAddress
+  ); //<-- if you want to instantiate a version of a contract at a specific address!
+  const plantoidSpawn = await ethers.getContractAt(
+    "PlantoidSpawn",
+    tx2.receipt.contractAddress
+  ); //<-- if you want to instantiate a version of a contract at a specific address!
   const plantoidMetadata = await ethers.getContractAt(
     "PlantoidMetadata",
     tx3.receipt.contractAddress
   ); //<-- if you want to instantiate a version of a contract at a specific address!
   await plantoidMetadata.transferOwnership(config.plantoidOracleAddress);
-  // const initAction = plantoid.interface.encodeFunctionData("init", [
-  //   config.plantoidOracleAddress,
-  //   config.artistAddress,
-  //   config.parentAddress,
-  //   config.name,
-  //   config.symbol,
-  //   config.prereveal,
-  //   ethers.utils.defaultAbiCoder.encode(
-  //     ["uint256", "uint256", "uint256", "uint256", "uint256"],
-  //     [
-  //       config.depositThreshold,
-  //       config.threshold,
-  //       config.proposalPeriod,
-  //       config.votingPeriod,
-  //       config.gracePeriod,
-  //     ]
-  //   ),
-  // ]);
-  // const salt = ethers.utils.keccak256(
-  //   ethers.utils.defaultAbiCoder.encode(["uint256"], [1])
-  // );
-  // console.log({ deployer });
-  // await plantoidSpawn.spawnPlantoid(salt, initAction);
-  // const plantoidAddress = await plantoidSpawn.plantoidAddress(deployer, salt);
-  // // const tx = await deploy("TipRelayer", {
-  // //   from: deployer,
-  // //   args: [
-  // //   ],
-  // //   log: true,
-  // //   waitConfirmations: 5,
-  // // });
+  const initAction = plantoid.interface.encodeFunctionData("init", [
+    config.plantoidOracleAddress,
+    config.artistAddress,
+    config.parentAddress,
+    config.name,
+    config.symbol,
+    config.prereveal,
+    ethers.utils.defaultAbiCoder.encode(
+      ["uint256", "uint256", "uint256", "uint256", "uint256"],
+      [
+        config.depositThreshold,
+        config.threshold,
+        config.proposalPeriod,
+        config.votingPeriod,
+        config.gracePeriod,
+      ]
+    ),
+  ]);
+  const salt = ethers.utils.keccak256(
+    ethers.utils.defaultAbiCoder.encode(["uint256"], [1])
+  );
+  console.log({ deployer });
+  await plantoidSpawn.spawnPlantoid(salt, initAction);
+  const plantoidAddress = await plantoidSpawn.plantoidAddress(deployer, salt);
+  // const tx = await deploy("TipRelayer", {
+  //   from: deployer,
+  //   args: [
+  //   ],
+  //   log: true,
+  //   waitConfirmations: 5,
+  // });
 
-  // console.log({ plantoidAddress });
+  console.log({ plantoidAddress });
   /*  await YourContract.setPurpose("Hello");
   
     To take ownership of yourContract using the ownable library uncomment next line and add the 

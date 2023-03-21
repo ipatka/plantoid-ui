@@ -2,21 +2,26 @@
 pragma solidity ^0.8.16;
 
 import "./base/ERC721Checkpointable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {SafeTransferLib} from "@rari-capital/solmate/src/utils/SafeTransferLib.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {IPlantoid, IPlantoidSpawner} from "./IPlantoid.sol";
 
 /// @title Plantoid
 /// @dev Blockchain based lifeform
 ///
 ///
-contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
+contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
     using SafeTransferLib for address payable;
     using ECDSA for bytes32; /*ECDSA for signature recovery for license mints*/
 
-    function viewProposals(uint256 _round, uint256 _proposal)
+    function viewProposals(
+        uint256 _round,
+        uint256 _proposal
+    )
         public
         view
         returns (
@@ -59,17 +64,21 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         } else return rounds[_round].roundState;
     }
 
-    mapping(uint256 => bool) public revealed; /*Track if plantoid has revealed the NFT*/
+    mapping(uint256 => bool)
+        public revealed; /*Track if plantoid has revealed the NFT*/
 
     string public prerevealUri; /*Before reveal, render a default NFT image*/
 
     /*****************
     Reproduction state mgmt
     *****************/
-    uint256 public threshold; /*Threshold of received ETH to trigger a spawning round*/
-    uint256 public depositThreshold; /*Threshold of received ETH to trigger an NFT to mint*/
+    uint256
+        public threshold; /*Threshold of received ETH to trigger a spawning round*/
+    uint256
+        public depositThreshold; /*Threshold of received ETH to trigger an NFT to mint*/
 
-    mapping(uint256 => uint256) public votingEnd; /*Voting round => time when voting ends*/
+    mapping(uint256 => uint256)
+        public votingEnd; /*Voting round => time when voting ends*/
     uint256 public escrow; /*ETH locked until voting is concluded*/
 
     mapping(uint256 => Round) public rounds; /* round => round state*/
@@ -78,18 +87,22 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     address payable public parent; /* Parent plantoid contract*/
     address payable public artist; /* Store artist for this plantoid*/
 
-    uint256 public proposalPeriod; /*Time during which artists can submit proposals*/
-    uint256 public votingPeriod; /*Time during which holders can vote for active proposals*/
-    uint256 public gracePeriod; /*Time between voting ended and when vote can settle*/
+    uint256
+        public proposalPeriod; /*Time during which artists can submit proposals*/
+    uint256
+        public votingPeriod; /*Time during which holders can vote for active proposals*/
+    uint256
+        public gracePeriod; /*Time between voting ended and when vote can settle*/
 
     uint256 public salt;
 
     /*****************
     Minting state mgmt
     *****************/
-    address public plantoidAddress; /* Plantoid oracle TODO make changeable by creator? */
+    address public plantoidAddress;
     uint256 _tokenIds; /* Track minted seed token IDS*/
-    mapping(uint256 => string) private _tokenUris; /*Track token URIs for each seed*/
+    mapping(uint256 => string)
+        private _tokenUris; /*Track token URIs for each seed*/
 
     /*****************
     Config state mgmt
@@ -107,7 +120,9 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     /// @dev contructor creates an unusable plantoid for future spawn templates
     constructor() ERC721("", "") initializer {
         /* initializer modifier makes it so init cannot be called on template*/
-        plantoidAddress = address(0xdead); /*Set address to dead so receive fallback of template fails*/
+        plantoidAddress = address(
+            0xdead
+        ); /*Set address to dead so receive fallback of template fails*/
     }
 
     /// @dev Initialize
@@ -126,8 +141,12 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         _name = name_;
         _symbol = symbol_;
         prerevealUri = _prerevealUri;
-        spawner = IPlantoidSpawner(msg.sender); /*Initialize interface to spawner*/
+        spawner = IPlantoidSpawner(
+            msg.sender
+        ); /*Initialize interface to spawner*/
         _setParameters(_thresholdsAndPeriods);
+        __Ownable_init();
+        transferOwnership(_plantoid);
         emit NewPlantoid(_plantoid);
     }
 
@@ -163,18 +182,19 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     /// @notice return the URI if a token exists
     ///     If not revealed, return pre-reveal URI
     /// @param _tokenId Token URI to query
-    function tokenURI(uint256 _tokenId)
-        public
-        view
-        override
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 _tokenId
+    ) public view override returns (string memory) {
         if (!_exists(_tokenId)) {
             revert URIQueryForNonexistentToken();
         }
 
         if (!revealed[_tokenId]) return prerevealUri;
         return _tokenUris[_tokenId];
+    }
+
+    function setPrerevealURI(string memory _prerevealUri) external onlyOwner {
+        prerevealUri = _prerevealUri;
     }
 
     /*****************
@@ -331,15 +351,19 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     /// @param _proposal ID of proposal
     function submitVote(uint256 _proposal) external {
         Round storage currentRound = rounds[round];
-        if (currentRound.votingEnd < block.timestamp) revert NotInVoting(); /*Revert if voting period is over*/
-        if (_proposal >= currentRound.proposalCount) revert InvalidProposal(); /*Revert if proposal is blank*/
-        if (currentRound.proposals[_proposal].vetoed) revert Vetoed(); /*Revert if proposal is vetoed*/
+        if (currentRound.votingEnd < block.timestamp)
+            revert NotInVoting(); /*Revert if voting period is over*/
+        if (_proposal >= currentRound.proposalCount)
+            revert InvalidProposal(); /*Revert if proposal is blank*/
+        if (currentRound.proposals[_proposal].vetoed)
+            revert Vetoed(); /*Revert if proposal is vetoed*/
         if (currentRound.hasVoted[msg.sender]) revert AlreadyVoted();
         uint256 eligibleVotes = getPriorVotes(
             msg.sender,
             currentRound.roundStart
         );
-        if (eligibleVotes == 0) revert NoVotingTokens(); /*Revert if no balance when round started*/
+        if (eligibleVotes == 0)
+            revert NoVotingTokens(); /*Revert if no balance when round started*/
         currentRound.hasVoted[msg.sender] = true;
         currentRound.totalVotes += eligibleVotes;
         currentRound.proposals[_proposal].votes += eligibleVotes;
@@ -362,7 +386,7 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
-    ) external returns (address _plantoid){
+    ) external returns (address _plantoid) {
         _plantoid = _spawn(
             _round,
             spawner,
@@ -398,7 +422,7 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         string memory _plantoidName,
         string memory _plantoidSymbol,
         string memory _prerevealUri
-    ) external returns (address _plantoid){
+    ) external returns (address _plantoid) {
         _plantoid = _spawn(
             _round,
             _newPlantoidSpawner,
@@ -429,7 +453,7 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
         string memory _plantoidSymbol,
         string memory _prerevealUri,
         bytes memory _periodsAndThresholds
-    ) internal returns (address _plantoid){
+    ) internal returns (address _plantoid) {
         Round storage currentRound = rounds[_round];
         if (
             (currentRound.proposals[currentRound.winningProposal].proposer !=
@@ -469,7 +493,11 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
             _tokenIds += 1;
 
             emit Deposit(msg.value, msg.sender, _tokenIds);
-            _mint(address(this), msg.sender, _tokenIds); /*Mint unrevealed token to sender*/
+            _mint(
+                address(this),
+                msg.sender,
+                _tokenIds
+            ); /*Mint unrevealed token to sender*/
         }
     }
 
@@ -512,6 +540,24 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, Initializable {
     ) internal pure returns (bool) {
         return data.toEthSignedMessageHash().recover(signature) == account;
     }
+
+    function _msgSender()
+        internal
+        view
+        override(Context, ContextUpgradeable)
+        returns (address)
+    {
+        return msg.sender;
+    }
+
+    function _msgData()
+        internal
+        view
+        override(Context, ContextUpgradeable)
+        returns (bytes calldata)
+    {
+        return msg.data;
+    }
 }
 
 contract PlantoidSpawn is IPlantoidSpawner {
@@ -523,11 +569,10 @@ contract PlantoidSpawn is IPlantoidSpawner {
         template = _template;
     }
 
-    function plantoidAddress(address by, bytes32 salt)
-        external
-        view
-        returns (address addr, bool exists)
-    {
+    function plantoidAddress(
+        address by,
+        bytes32 salt
+    ) external view returns (address addr, bool exists) {
         addr = Clones.predictDeterministicAddress(
             template,
             _saltedSalt(by, salt),
@@ -536,10 +581,10 @@ contract PlantoidSpawn is IPlantoidSpawner {
         exists = addr.code.length > 0;
     }
 
-    function spawnPlantoid(bytes32 salt, bytes calldata initData)
-        external
-        returns (address payable newPlantoid)
-    {
+    function spawnPlantoid(
+        bytes32 salt,
+        bytes calldata initData
+    ) external returns (address payable newPlantoid) {
         // Create Plantoid proxy
         newPlantoid = payable(
             Clones.cloneDeterministic(template, _saltedSalt(msg.sender, salt))
@@ -580,11 +625,10 @@ contract PlantoidSpawn is IPlantoidSpawner {
      * @param salt The salt, generated on the client side.
      * @return result The computed value.
      */
-    function _saltedSalt(address by, bytes32 salt)
-        internal
-        pure
-        returns (bytes32 result)
-    {
+    function _saltedSalt(
+        address by,
+        bytes32 salt
+    ) internal pure returns (bytes32 result) {
         assembly {
             // Store the variables into the scratch space.
             mstore(0x00, by)

@@ -194,7 +194,8 @@ function App(props) {
   console.log({ roundAndState, round, roundState });
 
   // const plantoidAddress = "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E".toLowerCase();
-  const plantoidAddress = "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d".toLowerCase();
+  // const plantoidAddress = "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d".toLowerCase();
+  const plantoidAddress = "0x5c62bF6Fb646CB2d61B6422411D75A99fF3B1551".toLowerCase();
 
   const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String)
   {

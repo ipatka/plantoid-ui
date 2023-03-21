@@ -786,6 +786,19 @@ const DAIABI = [
 
 const PlantoidABI = [
   {
+    inputs: [
+      {
+        internalType: "string",
+        name: "_prerevealUri",
+        type: "string",
+      },
+    ],
+    name: "setPrerevealURI",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [],
     stateMutability: "nonpayable",
     type: "constructor",
@@ -2416,7 +2429,7 @@ module.exports = {
   5: {
     contracts: {
       plantoid: {
-        address: "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d",
+        address: "0x5c62bF6Fb646CB2d61B6422411D75A99fF3B1551",
         abi: PlantoidABI,
       },
     },

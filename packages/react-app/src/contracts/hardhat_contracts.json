@@ -3231,7 +3231,7 @@
       "chainId": "5",
       "contracts": {
         "Plantoid": {
-          "address": "0x1C147bc1BD3811c1E4B2a1526457151A624b5A98",
+          "address": "0x5c62bF6Fb646CB2d61B6422411D75A99fF3B1551",
           "abi": [
             {
               "inputs": [],
@@ -3492,6 +3492,19 @@
               "inputs": [
                 {
                   "indexed": false,
+                  "internalType": "uint8",
+                  "name": "version",
+                  "type": "uint8"
+                }
+              ],
+              "name": "Initialized",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
                   "internalType": "address",
                   "name": "oracle",
                   "type": "address"
@@ -3535,6 +3548,25 @@
                 }
               ],
               "name": "NewSpawn",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferred",
               "type": "event"
             },
             {
@@ -4178,6 +4210,19 @@
               "type": "function"
             },
             {
+              "inputs": [],
+              "name": "owner",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
               "inputs": [
                 {
                   "internalType": "uint256",
@@ -4246,6 +4291,13 @@
                 }
               ],
               "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "renounceOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
               "type": "function"
             },
             {
@@ -4459,6 +4511,19 @@
                 }
               ],
               "name": "setApprovalForAll",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "string",
+                  "name": "_prerevealUri",
+                  "type": "string"
+                }
+              ],
+              "name": "setPrerevealURI",
               "outputs": [],
               "stateMutability": "nonpayable",
               "type": "function"
@@ -4788,6 +4853,19 @@
                 }
               ],
               "name": "transferFrom",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "transferOwnership",
               "outputs": [],
               "stateMutability": "nonpayable",
               "type": "function"
@@ -5018,7 +5096,7 @@
           ]
         },
         "PlantoidSpawn": {
-          "address": "0x77A318C43b22A45631371291F719cEC27233DCdA",
+          "address": "0xD6A57C7665D3860e00e9Fded4D0666cAF2263262",
           "abi": [
             {
               "inputs": [
@@ -5121,7 +5199,7 @@
       "chainId": "31337",
       "contracts": {
         "Plantoid": {
-          "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+          "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
           "abi": [
             {
               "inputs": [],
@@ -5382,6 +5460,19 @@
               "inputs": [
                 {
                   "indexed": false,
+                  "internalType": "uint8",
+                  "name": "version",
+                  "type": "uint8"
+                }
+              ],
+              "name": "Initialized",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": false,
                   "internalType": "address",
                   "name": "oracle",
                   "type": "address"
@@ -5425,6 +5516,25 @@
                 }
               ],
               "name": "NewSpawn",
+              "type": "event"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "previousOwner",
+                  "type": "address"
+                },
+                {
+                  "indexed": true,
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "OwnershipTransferred",
               "type": "event"
             },
             {
@@ -6068,6 +6178,19 @@
               "type": "function"
             },
             {
+              "inputs": [],
+              "name": "owner",
+              "outputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
               "inputs": [
                 {
                   "internalType": "uint256",
@@ -6136,6 +6259,13 @@
                 }
               ],
               "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "renounceOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
               "type": "function"
             },
             {
@@ -6349,6 +6479,19 @@
                 }
               ],
               "name": "setApprovalForAll",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "string",
+                  "name": "_prerevealUri",
+                  "type": "string"
+                }
+              ],
+              "name": "setPrerevealURI",
               "outputs": [],
               "stateMutability": "nonpayable",
               "type": "function"
@@ -6685,6 +6828,19 @@
             {
               "inputs": [
                 {
+                  "internalType": "address",
+                  "name": "newOwner",
+                  "type": "address"
+                }
+              ],
+              "name": "transferOwnership",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
                   "internalType": "uint256",
                   "name": "_proposal",
                   "type": "uint256"
@@ -6792,7 +6948,7 @@
           ]
         },
         "PlantoidMetadata": {
-          "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+          "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
           "abi": [
             {
               "anonymous": false,
@@ -6908,7 +7064,7 @@
           ]
         },
         "PlantoidSpawn": {
-          "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+          "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
           "abi": [
             {
               "inputs": [
