@@ -5,8 +5,31 @@
 
 body {
   margin: 0;
+  background-image: url("themes/header.png");
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: left top;
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+
+@font-face {
+  font-family: "Balivia";
+  src:url("../../react-app/src/fonts/Balivia.ttf");
+}
+
+.balivia {
+  font-family: "Balivia";
+  font-size: 32px;
+  color: yellowgreen;
+}
+
+
+hr.style-eight {
+  border: 0;
+  height: 1px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0));
 }

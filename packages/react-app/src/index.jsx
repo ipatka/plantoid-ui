@@ -12,6 +12,7 @@ const themes = {
 };
 
 const prevTheme = window.localStorage.getItem("theme");
+console.log("prev theme =" + prevTheme);
 
 const subgraphUri = "https://api.thegraph.com/subgraphs/name/ipatka/plantoid-testnet"
 // const subgraphUri = "http://localhost:8000/subgraphs/name/scaffold-eth/your-contract";
@@ -23,7 +24,7 @@ const client = new ApolloClient({
 
 ReactDOM.render(
   <ApolloProvider client={client}>
-    <ThemeSwitcherProvider themeMap={themes} defaultTheme={prevTheme || "light"}>
+    <ThemeSwitcherProvider themeMap={themes} defaultTheme={prevTheme || "dark"}>
       <BrowserRouter>
         <App subgraphUri={subgraphUri} />
       </BrowserRouter>

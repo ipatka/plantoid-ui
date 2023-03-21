@@ -53,13 +53,18 @@ export default function Reveal({ address, userSigner, user, graphData, round, ro
   ];
 
   console.log({ graphData });
-  return (
-    <div>
+  if(address) {
+    console.log("GRAPH DATA!!!!!!!! ",graphData)
+    return (
+      <div>
       <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
-        {graphData ? <Table dataSource={graphData.seeds} columns={revealColumns} rowKey="id" /> : <span>No data</span>}
+        {graphData ? <Table dataSource={graphData.holder.seeds} columns={revealColumns} rowKey="id" /> : <span>No data</span>}
       </div>
     </div>
-  );
+    )
+  } else {
+    return <div>No user</div>
+  }
 }
 
 const revealMetadata = async (userSigner, tokenUri, tokenId, signature, plantoidAddress) => {
