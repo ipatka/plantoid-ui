@@ -18,57 +18,6 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
     using SafeTransferLib for address payable;
     using ECDSA for bytes32; /*ECDSA for signature recovery for license mints*/
 
-    function viewProposals(
-        uint256 _round,
-        uint256 _proposal
-    )
-        public
-        view
-        returns (
-            uint256 votes,
-            address proposer,
-            bool vetoed,
-            string memory uri
-        )
-    {
-        votes = rounds[_round].proposals[_proposal].votes;
-        proposer = rounds[_round].proposals[_proposal].proposer;
-        vetoed = rounds[_round].proposals[_proposal].vetoed;
-        uri = rounds[_round].proposals[_proposal].uri;
-    }
-
-    function currentRoundState()
-        public
-        view
-        returns (uint256 _round, RoundState _state)
-    {
-        _round = round;
-        _state = roundState(_round);
-    }
-
-    function roundState(uint256 _round) public view returns (RoundState state) {
-        if (rounds[_round].roundState == RoundState.Pending)
-            return RoundState.Pending;
-        else if (rounds[_round].roundState == RoundState.Proposal) {
-            if (rounds[_round].proposalEnd > block.timestamp)
-                return RoundState.Proposal;
-            else return RoundState.NeedsAdvancement;
-        } else if (rounds[_round].roundState == RoundState.Voting) {
-            if (rounds[_round].votingEnd > block.timestamp)
-                return RoundState.Voting;
-            else return RoundState.NeedsAdvancement;
-        } else if (rounds[_round].roundState == RoundState.Grace) {
-            if (rounds[_round].graceEnd > block.timestamp)
-                return RoundState.Grace;
-            else return RoundState.NeedsSettlement;
-        } else return rounds[_round].roundState;
-    }
-
-    mapping(uint256 => bool)
-        public revealed; /*Track if plantoid has revealed the NFT*/
-
-    string public prerevealUri; /*Before reveal, render a default NFT image*/
-
     /*****************
     Reproduction state mgmt
     *****************/
@@ -106,12 +55,17 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
     mapping(uint256 => string)
         private _tokenUris; /*Track token URIs for each seed*/
 
+    mapping(uint256 => bool)
+        public revealed; /*Track if plantoid has revealed the NFT*/
+
     /*****************
     Config state mgmt
     *****************/
     string private _name; /*Token name override*/
     string private _symbol; /*Token symbol override*/
     string public contractURI; /*contractURI contract metadata json*/
+
+    string public prerevealUri; /*Before reveal, render a default NFT image*/
 
     IPlantoidSpawner public spawner; /*Contract to spawn new plantoids*/
 
@@ -170,6 +124,60 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
         gracePeriod = _gracePeriod;
     }
 
+    function setPrerevealURI(string memory _prerevealUri) external onlyOwner {
+        prerevealUri = _prerevealUri;
+    }
+
+    /*****************
+    View Helpers
+    *****************/
+
+    function viewProposals(
+        uint256 _round,
+        uint256 _proposal
+    )
+        public
+        view
+        returns (
+            uint256 votes,
+            address proposer,
+            bool vetoed,
+            string memory uri
+        )
+    {
+        votes = rounds[_round].proposals[_proposal].votes;
+        proposer = rounds[_round].proposals[_proposal].proposer;
+        vetoed = rounds[_round].proposals[_proposal].vetoed;
+        uri = rounds[_round].proposals[_proposal].uri;
+    }
+
+    function currentRoundState()
+        public
+        view
+        returns (uint256 _round, RoundState _state)
+    {
+        _round = round;
+        _state = roundState(_round);
+    }
+
+    function roundState(uint256 _round) public view returns (RoundState state) {
+        if (rounds[_round].roundState == RoundState.Pending)
+            return RoundState.Pending;
+        else if (rounds[_round].roundState == RoundState.Proposal) {
+            if (rounds[_round].proposalEnd > block.timestamp)
+                return RoundState.Proposal;
+            else return RoundState.NeedsAdvancement;
+        } else if (rounds[_round].roundState == RoundState.Voting) {
+            if (rounds[_round].votingEnd > block.timestamp)
+                return RoundState.Voting;
+            else return RoundState.NeedsAdvancement;
+        } else if (rounds[_round].roundState == RoundState.Grace) {
+            if (rounds[_round].graceEnd > block.timestamp)
+                return RoundState.Grace;
+            else return RoundState.NeedsSettlement;
+        } else return rounds[_round].roundState;
+    }
+
     /*****************
     External Data
     *****************/
@@ -193,10 +201,6 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
 
         if (!revealed[_tokenId]) return prerevealUri;
         return _tokenUris[_tokenId];
-    }
-
-    function setPrerevealURI(string memory _prerevealUri) external onlyOwner {
-        prerevealUri = _prerevealUri;
     }
 
     /*****************
@@ -323,20 +327,14 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
         else {
             currentRound.fundsDistributed = true;
             uint256 _fundsToDistribute = threshold;
-            // escrow -= threshold; /*Reduce escrow balance*/
 
             uint256 _toParentOrArtist = (threshold * 10) / 100;
             _fundsToDistribute -= _toParentOrArtist;
-            // artist.safeTransferETH(_toParentOrArtist);
             withdrawableBalances[artist] += _toParentOrArtist;
             if (parent != address(0)) {
                 _fundsToDistribute -= _toParentOrArtist;
-                // parent.safeTransferETH(_toParentOrArtist);
                 withdrawableBalances[parent] += _toParentOrArtist;
             }
-            // payable(
-            //     currentRound.proposals[currentRound.winningProposal].proposer
-            // ).safeTransferETH(_fundsToDistribute);
             withdrawableBalances[
                 currentRound.proposals[currentRound.winningProposal].proposer
             ] += _fundsToDistribute;
@@ -505,27 +503,6 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
         );
     }
 
-    /*****************
-    Supporter functions
-    *****************/
-    receive() external payable {
-        require(
-            plantoidAddress != address(0xdead),
-            "Cannot send ETH to dead plantoid"
-        );
-
-        if (msg.value >= depositThreshold) {
-            _tokenIds += 1;
-
-            emit Deposit(msg.value, msg.sender, _tokenIds);
-            _mint(
-                address(this),
-                msg.sender,
-                _tokenIds
-            ); /*Mint unrevealed token to sender*/
-        }
-    }
-
     /// @dev Reveal NFT content for a supporter NFT
     /// @param _tokenId Token ID
     /// @param _tokenUri URI of metadata for plantoid interaction
@@ -549,6 +526,27 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
         revealed[_tokenId] = true;
 
         emit Revealed(_tokenId, _tokenUri);
+    }
+
+    /*****************
+    Supporter functions
+    *****************/
+    receive() external payable {
+        require(
+            plantoidAddress != address(0xdead),
+            "Cannot send ETH to dead plantoid"
+        );
+
+        if (msg.value >= depositThreshold) {
+            _tokenIds += 1;
+
+            emit Deposit(msg.value, msg.sender, _tokenIds);
+            _mint(
+                address(this),
+                msg.sender,
+                _tokenIds
+            ); /*Mint unrevealed token to sender*/
+        }
     }
 
     /*****************

@@ -5,6 +5,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 import { Plantoid } from '../typechain/Plantoid'
 import { PlantoidSpawn } from '../typechain/PlantoidSpawn'
+import { PlantoidMetadata } from '../typechain/PlantoidMetadata'
 import { Wallet } from '@ethersproject/wallet'
 import { ContractFactory, ContractTransaction } from '@ethersproject/contracts'
 import { BaseProvider } from '@ethersproject/providers'
@@ -60,6 +61,8 @@ describe('Plantoid NFT', function () {
     let plantoidAsOracle: Plantoid
     let plantoidAsArtist: Plantoid
 
+    let plantoidMetadataOracle: PlantoidMetadata
+
     let plantoidOracle: Wallet
     let firstCreator: SignerWithAddress
     let applicant: SignerWithAddress
@@ -68,6 +71,7 @@ describe('Plantoid NFT', function () {
 
     let Plantoid: ContractFactory
     let PlantoidSpawn: ContractFactory
+    let PlantoidMetadataOracle: ContractFactory
 
     let provider: BaseProvider
 
@@ -98,6 +102,9 @@ describe('Plantoid NFT', function () {
                 [config.depositThreshold, config.threshold, config.proposalPeriod, config.votingPeriod, config.gracePeriod]
             ),
         ])
+        PlantoidMetadataOracle = await ethers.getContractFactory('PlantoidMetadata')
+        plantoidMetadataOracle = (await PlantoidMetadataOracle.deploy()) as PlantoidMetadata
+        await plantoidMetadataOracle.transferOwnership(plantoidOracle.address)
     })
 
     beforeEach(async function () {
@@ -116,6 +123,7 @@ describe('Plantoid NFT', function () {
         it('verify deployment parameters', async function () {
             expect(await plantoidInstance.artist()).to.equal(firstCreator.address)
             expect(await plantoidInstance.plantoidAddress()).to.equal(plantoidOracle.address)
+            expect(await plantoidMetadataOracle.owner()).to.equal(plantoidOracle.address)
         })
 
         describe('donation', function () {
@@ -190,16 +198,6 @@ describe('Plantoid NFT', function () {
             const sig = await plantoidOracle.signMessage(msgHash)
             await plantoidAsSupporter.revealContent(tokenId, testUri, sig)
             await expect(plantoidAsSupporter.revealContent(tokenId, testUri, sig)).to.be.revertedWith(errorMessages.alreadyRevealed)
-        })
-        it('Fails if not signed by oracle', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('1') })
-            const tokenId = 1
-            const testUri = 'test'
-            const msgHash = ethers.utils.arrayify(
-                ethers.utils.solidityKeccak256(['uint256', 'string', 'address'], [tokenId, testUri, plantoidInstance.address])
-            )
-            const sig = await supporter.signMessage(msgHash)
-            await expect(plantoidAsSupporter.revealContent(tokenId, testUri, sig)).to.be.revertedWith('Not signer')
         })
         it('Fails if not signed by oracle', async function () {
             await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('1') })
@@ -672,7 +670,6 @@ describe('Plantoid NFT', function () {
             const currentRoundState = await plantoidAsApplicant.currentRoundState()
             expect(currentRoundState._round).to.equal(1)
             expect(currentRoundState._state).to.equal(1)
-
         })
 
         it('Does not allow new round to start using escrowed funds', async function () {
@@ -1019,6 +1016,25 @@ describe('Plantoid NFT', function () {
         })
     })
 
+    describe('Metadata Oracle', function () {
+        it('Allows anyone to post metadata with valid signature', async function () {
+            const msgHash = ethers.utils.arrayify(
+                ethers.utils.solidityKeccak256(['uint256', 'string', 'address'], [1, 'test', plantoidInstance.address])
+            )
+            const sig = await plantoidOracle.signMessage(msgHash)
+            const plantoidOracleAsSupporter = plantoidMetadataOracle.connect(supporter)
+            await plantoidOracleAsSupporter.revealMetadata(plantoidInstance.address, 1, 'test', sig)
+        })
+        it('Fails if not signed by oracle', async function () {
+            const tokenId = 1
+            const testUri = 'test'
+            const msgHash = ethers.utils.arrayify(
+                ethers.utils.solidityKeccak256(['uint256', 'string', 'address'], [tokenId, testUri, plantoidInstance.address])
+            )
+            const sig = await supporter.signMessage(msgHash)
+            await expect(plantoidMetadataOracle.revealMetadata(plantoidInstance.address, tokenId, testUri, sig)).to.be.revertedWith('Not signer')
+        })
+    })
     // Plantoid metadata
     // Anyone can submit reveal with valid signature
     // Cannot reveal with invalid signature
