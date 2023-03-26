@@ -11,10 +11,6 @@ import { BaseProvider } from '@ethersproject/providers'
 
 use(solidity)
 
-// chai
-//   .use(require('chai-as-promised'))
-//   .should();
-
 async function blockTime() {
     const block = await ethers.provider.getBlock('latest')
     return block.timestamp
@@ -25,10 +21,16 @@ const errorMessages = {
     notInVoting: 'NotInVoting()',
     alreadyVoted: 'AlreadyVoted()',
     notOwner: 'NotOwner()',
+    cannotSpawn: 'CannotSpawn()',
+    notArtist: 'NotArtist()',
     invalidProposal: 'InvalidProposal()',
     vetoed: 'Vetoed()',
     notMinted: 'NotMinted()',
     alreadyRevealed: 'AlreadyRevealed()',
+    cannotAdvance: 'CannotAdvance()',
+    cannotVeto: 'CannotVeto()',
+    stillProposing: 'StillProposing()',
+    nothingToWithdraw: 'NothingToWithdraw()',
 }
 
 export const fastForwardTime = async (seconds: number) => {
@@ -39,25 +41,15 @@ const zeroAddress = '0x0000000000000000000000000000000000000000'
 
 const testKey = '0xdd631135f3a99e4d747d763ab5ead2f2340a69d2a90fab05e20104731365fde3'
 
-const getNewPlantoidAddress = async (tx: ContractTransaction): Promise<string> => {
-    const receipt = await ethers.provider.getTransactionReceipt(tx.hash)
-    let plantoidSummonAbi = ['event PlantoidSpawned(address indexed plantoid, address indexed artist)']
-    let iface = new ethers.utils.Interface(plantoidSummonAbi)
-    let log = iface.parseLog(receipt.logs[0])
-    const { plantoid } = log.args
-    return plantoid
-}
-
 const config = {
     depositThreshold: ethers.utils.parseEther('0.001'),
     threshold: ethers.utils.parseEther('1'),
     name: 'Plantoid',
     prereveal: 'preveal',
     symbol: 'LIFE',
+    proposalPeriod: 1000,
     votingPeriod: 1000,
     gracePeriod: 500,
-    settlePeriod: 300,
-    extPeriod: 200,
 }
 
 describe('Plantoid NFT', function () {
@@ -65,48 +57,59 @@ describe('Plantoid NFT', function () {
     let plantoidSpawn: PlantoidSpawn
     let plantoidAsApplicant: Plantoid
     let plantoidAsSupporter: Plantoid
+    let plantoidAsOracle: Plantoid
+    let plantoidAsArtist: Plantoid
 
     let plantoidOracle: Wallet
     let firstCreator: SignerWithAddress
     let applicant: SignerWithAddress
     let supporter: SignerWithAddress
+    let secondCreator: SignerWithAddress
 
     let Plantoid: ContractFactory
     let PlantoidSpawn: ContractFactory
 
     let provider: BaseProvider
-    
+
     let accounts: SignerWithAddress[]
+
+    let initAction: any
 
     this.beforeAll(async function () {
         const adminAbstract = new ethers.Wallet(testKey)
         provider = ethers.provider
         plantoidOracle = await adminAbstract.connect(provider)
-        ;[firstCreator, applicant, supporter] = await ethers.getSigners()
+        ;[firstCreator, applicant, supporter, secondCreator] = await ethers.getSigners()
+        await firstCreator.sendTransaction({ to: plantoidOracle.address, value: ethers.utils.parseEther('1') })
         accounts = await ethers.getSigners()
         Plantoid = await ethers.getContractFactory('Plantoid')
         PlantoidSpawn = await ethers.getContractFactory('PlantoidSpawn')
         const plantoidAbstract = (await Plantoid.deploy()) as Plantoid
         plantoidSpawn = (await PlantoidSpawn.deploy(plantoidAbstract.address)) as PlantoidSpawn
-    })
-
-    beforeEach(async function () {
-        const tx = await plantoidSpawn.spawnPlantoid(
+        initAction = plantoidAbstract.interface.encodeFunctionData('init', [
             plantoidOracle.address,
             firstCreator.address,
             zeroAddress,
-            [config.depositThreshold,
-            config.threshold],
-            [config.votingPeriod, config.gracePeriod, config.settlePeriod, config.extPeriod],
             config.name,
             config.symbol,
-            config.prereveal
-        )
-        const plantoid = await getNewPlantoidAddress(tx)
-        plantoidInstance = (await Plantoid.attach(plantoid)) as Plantoid
+            config.prereveal,
+            ethers.utils.defaultAbiCoder.encode(
+                ['uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+                [config.depositThreshold, config.threshold, config.proposalPeriod, config.votingPeriod, config.gracePeriod]
+            ),
+        ])
+    })
+
+    beforeEach(async function () {
+        const salt = ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['uint256'], [Math.round(Math.random() * 100000)]))
+        await plantoidSpawn.spawnPlantoid(salt, initAction)
+        const plantoid = await plantoidSpawn.plantoidAddress(firstCreator.address, salt)
+        plantoidInstance = (await Plantoid.attach(plantoid.addr)) as Plantoid
 
         plantoidAsSupporter = plantoidInstance.connect(supporter)
         plantoidAsApplicant = plantoidInstance.connect(applicant)
+        plantoidAsOracle = plantoidInstance.connect(plantoidOracle)
+        plantoidAsArtist = plantoidInstance.connect(firstCreator)
     })
 
     describe('constructor', function () {
@@ -130,8 +133,9 @@ describe('Plantoid NFT', function () {
                 expect(await plantoidInstance.ownerOf(1)).to.equal(supporter.address)
             })
 
-            it('Fails if value is below threshold', async function () {
-                await expect(supporter.sendTransaction({ to: plantoidInstance.address, value: config.depositThreshold.sub(1)})).to.be.revertedWith(errorMessages.belowThreshold)
+            it('Does not mint NFT if donation is below threshold', async function () {
+                await supporter.sendTransaction({ to: plantoidInstance.address, value: config.depositThreshold.sub(1) })
+                expect(await plantoidInstance.balanceOf(supporter.address)).to.equal(0)
             })
 
             it('Mints an NFT with prereveal uri', async function () {
@@ -187,220 +191,835 @@ describe('Plantoid NFT', function () {
             await plantoidAsSupporter.revealContent(tokenId, testUri, sig)
             await expect(plantoidAsSupporter.revealContent(tokenId, testUri, sig)).to.be.revertedWith(errorMessages.alreadyRevealed)
         })
+        it('Fails if not signed by oracle', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('1') })
+            const tokenId = 1
+            const testUri = 'test'
+            const msgHash = ethers.utils.arrayify(
+                ethers.utils.solidityKeccak256(['uint256', 'string', 'address'], [tokenId, testUri, plantoidInstance.address])
+            )
+            const sig = await supporter.signMessage(msgHash)
+            await expect(plantoidAsSupporter.revealContent(tokenId, testUri, sig)).to.be.revertedWith('Not signer')
+        })
+        it('Fails if not signed by oracle', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('1') })
+            const tokenId = 1
+            const testUri = 'test'
+            const msgHash = ethers.utils.arrayify(
+                ethers.utils.solidityKeccak256(['uint256', 'string', 'address'], [tokenId, testUri, plantoidInstance.address])
+            )
+            const sig = await supporter.signMessage(msgHash)
+            await expect(plantoidAsSupporter.revealContent(tokenId, testUri, sig)).to.be.revertedWith('Not signer')
+        })
+        it('Allows oracle to set prereveal URI', async function () {
+            await plantoidAsOracle.setPrerevealURI('test2')
+            expect(await plantoidInstance.prerevealUri()).to.equal('test2')
+        })
+        it('Does not allow anyone else to set prereveal URI', async function () {
+            await expect(plantoidAsSupporter.setPrerevealURI('test2')).to.be.revertedWith('Ownable: caller is not the owner')
+        })
     })
 
     describe('proposals, voting', function () {
         it('Allows people to submit prop if threshold is reached', async function () {
             await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            expect(await plantoidInstance.proposalCounter(0)).to.equal(1)
-            const proposal = await plantoidInstance.proposals(0, 1)
-            expect(proposal.proposalUri).to.equal('test.com')
+            await plantoidAsApplicant.startProposals()
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(0)
+            expect(currentRoundState._state).to.equal(1)
+            await plantoidAsApplicant.submitProposal('test.com')
+            const currentRound = await plantoidAsApplicant.rounds(0)
+            expect(currentRound.proposalCount).to.equal(1)
+            const proposal = await plantoidAsApplicant.viewProposals(0, 0)
+            expect(proposal.uri).to.equal('test.com')
             expect(proposal.proposer).to.equal(applicant.address)
         })
 
-        it('Returns the max votes in a round', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-
-            await plantoidAsSupporter.submitVote(0, 1, [1, 2])
-            await plantoidAsSupporter.submitVote(0, 2, [4, 5, 6])
-            await plantoidAsSupporter.submitVote(0, 3, [3])
-
-            expect(await plantoidInstance.maxVotes(0)).to.equal(3)
+        it('Does not allow proposals to start until threshold reached', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.depositThreshold.sub(1) })
+            await expect(plantoidAsApplicant.startProposals()).to.be.revertedWith(errorMessages.belowThreshold)
         })
 
-        it('Returns the max votes in a round when tied', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-
-            await plantoidAsSupporter.submitVote(0, 1, [1, 2, 3])
-            await plantoidAsSupporter.submitVote(0, 2, [4, 5, 6])
-
-            expect(await plantoidInstance.maxVotes(0)).to.equal(3)
+        it('Does not allow advance round to be called before proposals started', async function () {
+            await expect(plantoidAsApplicant.advanceRound()).to.be.revertedWith(errorMessages.cannotAdvance)
         })
 
-        it('Increments votes per proposal', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-
-            await plantoidAsSupporter.submitVote(0, 1, [1, 2, 3])
-            await plantoidAsSupporter.submitVote(0, 2, [4, 5, 6])
-
-            expect(await plantoidInstance.votes(0, 1)).to.equal(3)
-            expect(await plantoidInstance.votes(0, 2)).to.equal(3)
-        })
-
-        it('Marks tokens as voted by proposal id', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-
-            await plantoidAsSupporter.submitVote(0, 1, [1, 2, 3])
-            await plantoidAsSupporter.submitVote(0, 2, [4, 5, 6])
-
-            expect(await plantoidInstance.voted(0, 1)).to.equal(1)
-            expect(await plantoidInstance.voted(0, 2)).to.equal(1)
-            expect(await plantoidInstance.voted(0, 4)).to.equal(2)
-            expect(await plantoidInstance.voted(0, 5)).to.equal(2)
-        })
-
-        it('fails to start voting if threshold not reached', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold.sub(10) })
-            await expect(plantoidAsApplicant.startVoting()).to.be.revertedWith(errorMessages.belowThreshold)
-        })
-
-        it('fails to submit proposal if voting not started', async function () {
-            await expect(plantoidAsApplicant.submitProposal(0, 'test')).to.be.revertedWith(errorMessages.notInVoting)
-        })
-
-        it('Allows multiple rounds to be in voting simultaneously', async function () {
+        it('Start proposals moves funds to escrow', async function () {
             await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold.mul(2) })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test1.com')
-            await plantoidAsApplicant.submitProposal(1, 'test2.com')
-
-            expect((await plantoidInstance.proposals(0, 1)).proposalUri).to.equal('test1.com')
-            expect((await plantoidInstance.proposals(1, 1)).proposalUri).to.equal('test2.com')
+            await plantoidAsApplicant.startProposals()
+            expect(await plantoidAsApplicant.escrow()).to.equal(config.threshold)
         })
 
-        it('Increments proposal counter per round', async function () {
+        it('Cannot start proposals multiple times', async function () {
             await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold.mul(2) })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test1.com')
-            await plantoidAsApplicant.submitProposal(0, 'test1.com')
-            await plantoidAsApplicant.submitProposal(1, 'test2.com')
-
-            expect(await plantoidInstance.proposalCounter(0)).to.equal(2)
-            expect(await plantoidInstance.proposalCounter(1)).to.equal(1)
+            await plantoidAsApplicant.startProposals()
+            await expect(plantoidAsApplicant.startProposals()).to.be.revertedWith(errorMessages.stillProposing)
         })
 
-        it('Allows people to submit vote if voting started', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsSupporter.submitVote(0, 1, [1])
-            expect(await plantoidInstance.votes(0, 1)).to.equal(1)
-            expect(await plantoidInstance.voted(0, 1)).to.equal(1)
+        it('Starts voting when proposal period over', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(0)
+            expect(currentRoundState._state).to.equal(2)
         })
 
-        it('Does not allow people to vote multiple times with same NFT', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsSupporter.submitVote(0, 1, [1])
-            await expect(plantoidAsSupporter.submitVote(0, 1, [1])).to.be.revertedWith(errorMessages.alreadyVoted)
+        it('Cannot start voting until proposal period over', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold.mul(2) })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await expect(plantoidAsApplicant.advanceRound()).to.be.revertedWith(errorMessages.cannotAdvance)
         })
 
-        it('Does not allow people to vote for blank proposal', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await expect(plantoidAsSupporter.submitVote(0, 2, [1])).to.be.revertedWith(errorMessages.invalidProposal)
+        it('Advance invalidates round if no proposals received', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            const lastRoundState = await plantoidAsApplicant.roundState(0)
+            expect(lastRoundState).to.equal(5)
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
+
+            expect(await plantoidAsApplicant.escrow()).to.equal(0)
         })
 
-        it('Does not allow people to vote with NFT they do not own', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await expect(plantoidAsApplicant.submitVote(0, 1, [1])).to.be.revertedWith(errorMessages.notOwner)
+        it('Allows round to move to grace once voting over', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(0)
+            expect(currentRoundState._state).to.equal(3)
         })
 
-        it('Allows creator to accept winner', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsSupporter.submitVote(0, 1, [1])
-            await fastForwardTime(config.votingPeriod + config.gracePeriod + 1)
-            await plantoidInstance.settle(0, 1, false)
-            expect(await plantoidInstance.winningProposal(0)).to.equal(1)
+        it('Cannot advance to grace until voting over', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+
+            await expect(plantoidAsApplicant.advanceRound()).to.be.revertedWith(errorMessages.cannotAdvance)
         })
 
-        it('Allows creator to veto winner', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsSupporter.submitVote(0, 1, [1])
-            await fastForwardTime(config.votingPeriod + config.gracePeriod + 1)
-            const oldEnd = await plantoidInstance.votingEnd(0)
-            await plantoidInstance.settle(0, 1, true)
-            const newEnd = await plantoidInstance.votingEnd(0)
-            expect(newEnd.sub(oldEnd).gt(config.extPeriod)).to.be.true
-            expect((await plantoidInstance.proposals(0, 1)).vetoed).to.equal(true)
-            expect(await plantoidInstance.votes(0, 1)).to.equal(0)
+        it('Settles invalid immediately if no votes', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            const lastRoundState = await plantoidAsApplicant.roundState(0)
+            expect(lastRoundState).to.equal(5)
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
         })
 
-        it('Allows supporters to vote again if vetoed', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsApplicant.submitProposal(0, 'test1.com')
-            await plantoidAsSupporter.submitVote(0, 1, [1])
-            expect(await plantoidInstance.voted(0, 1)).to.equal(1)
-            await fastForwardTime(config.votingPeriod + config.gracePeriod + 1)
-            await plantoidInstance.settle(0, 1, true)
-            await plantoidAsApplicant.submitProposal(0, 'test2.com')
-            await expect(plantoidAsSupporter.submitVote(0, 1, [1])).to.be.revertedWith(errorMessages.vetoed)
-            await plantoidAsSupporter.submitVote(0, 2, [1])
-            expect(await plantoidInstance.voted(0, 1)).to.equal(2)
+        it('Does not allow advanceround to be called after grace', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await expect(plantoidAsApplicant.advanceRound()).to.be.revertedWith(errorMessages.cannotAdvance)
         })
 
-        it('Allows winner to spawn new plantoid and sends ETH to creator', async function () {
-            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('3') })
-            await plantoidAsApplicant.startVoting()
-            await plantoidAsApplicant.submitProposal(0, 'test.com')
-            await plantoidAsSupporter.submitVote(0, 1, [1])
-            await fastForwardTime(config.votingPeriod + config.gracePeriod + 1)
-            await plantoidInstance.settle(0, 1, false)
+        it('Allows round to move to be settled after grace', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
 
-            const tx = await plantoidAsApplicant.spawn(
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsApplicant.settleRound()
+
+            const lastRoundState = await plantoidAsApplicant.roundState(0)
+            expect(lastRoundState).to.equal(4)
+            const lastRound = await plantoidAsApplicant.rounds(0)
+            expect(lastRound.winningProposal).to.equal(0)
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
+        })
+
+        it('Does not allow artist to veto during proposals', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+            await expect(plantoidAsArtist.vetoProposal(0)).to.be.revertedWith(errorMessages.cannotVeto)
+        })
+
+        it('Allows artist to veto during voting', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+
+            await plantoidAsArtist.vetoProposal(0)
+            const proposal = await plantoidAsApplicant.viewProposals(0, 0)
+            expect(proposal.vetoed).to.equal(true)
+        })
+
+        it('Allows artist to veto during grace', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsArtist.vetoProposal(0)
+            const proposal = await plantoidAsApplicant.viewProposals(0, 0)
+            expect(proposal.vetoed).to.equal(true)
+        })
+
+        it('Does not allow anyone else to veto', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await expect(plantoidAsSupporter.vetoProposal(0)).to.be.revertedWith(errorMessages.notArtist)
+            const proposal = await plantoidAsApplicant.viewProposals(0, 0)
+            expect(proposal.vetoed).to.equal(false)
+        })
+
+        it('Settles invalid if tie', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await applicant.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await plantoidAsApplicant.submitVote(1)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsApplicant.settleRound()
+
+            const lastRoundState = await plantoidAsApplicant.roundState(0)
+            expect(lastRoundState).to.equal(5)
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
+        })
+
+        it('Settles invalid if all vetoed', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await applicant.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await plantoidAsApplicant.submitVote(1)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+            await plantoidAsArtist.vetoProposal(0)
+            await plantoidAsArtist.vetoProposal(1)
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsApplicant.settleRound()
+
+            const lastRoundState = await plantoidAsApplicant.roundState(0)
+            expect(lastRoundState).to.equal(5)
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
+        })
+
+        it('Settles invalid if only vote with proposal vetoed', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await applicant.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+            await plantoidAsArtist.vetoProposal(0)
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsApplicant.settleRound()
+
+            const lastRoundState = await plantoidAsApplicant.roundState(0)
+            expect(lastRoundState).to.equal(5)
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
+        })
+
+        it('Settles valid if non vetoed proposal has votes', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await applicant.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await plantoidAsApplicant.submitVote(1)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+            await plantoidAsArtist.vetoProposal(0)
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsApplicant.settleRound()
+
+            const lastRoundState = await plantoidAsApplicant.roundState(0)
+            expect(lastRoundState).to.equal(4)
+            const lastRound = await plantoidAsApplicant.rounds(0)
+            expect(lastRound.winningProposal).to.equal(1)
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
+        })
+
+        it('Transfers percentages when first generation', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+            // const artistBalanceBefore = await provider.getBalance(firstCreator.address)
+            // const applicantBalanceBefore = await provider.getBalance(applicant.address)
+            const artistBalanceBefore = await plantoidInstance.withdrawableBalances(firstCreator.address)
+            const applicantBalanceBefore = await plantoidInstance.withdrawableBalances(applicant.address)
+
+            await plantoidAsSupporter.settleRound()
+
+            // const artistBalanceAfter = await provider.getBalance(firstCreator.address)
+            // const applicantBalanceAfter = await provider.getBalance(applicant.address)
+            const artistBalanceAfter = await plantoidInstance.withdrawableBalances(firstCreator.address)
+            const applicantBalanceAfter = await plantoidInstance.withdrawableBalances(applicant.address)
+
+            // console.log({
+            //     artistBalanceBefore: ethers.utils.formatEther(artistBalanceBefore),
+            //     artistBalanceAfter: ethers.utils.formatEther(artistBalanceAfter),
+            //     applicantBalanceBefore: ethers.utils.formatEther(applicantBalanceBefore),
+            //     applicantBalanceAfter: ethers.utils.formatEther(applicantBalanceAfter),
+            // })
+
+            expect(artistBalanceAfter.sub(artistBalanceBefore)).to.equal(config.threshold.div(10))
+            expect(applicantBalanceAfter.sub(applicantBalanceBefore)).to.equal(config.threshold.mul(9).div(10))
+        })
+
+        // Allows parties to withdraw
+        it('Allows parties to withdraw', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold.mul(2) })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsSupporter.settleRound()
+
+            const artistBalanceBefore = await provider.getBalance(firstCreator.address)
+            const applicantBalanceBefore = await provider.getBalance(applicant.address)
+            const escrowBefore = await plantoidInstance.escrow()
+
+            await plantoidAsSupporter.withdrawFor(firstCreator.address)
+            await plantoidAsSupporter.withdrawFor(applicant.address)
+
+            const artistBalanceAfter = await provider.getBalance(firstCreator.address)
+            const applicantBalanceAfter = await provider.getBalance(applicant.address)
+            const escrowAfter = await plantoidInstance.escrow()
+
+            expect(artistBalanceAfter.sub(artistBalanceBefore)).to.equal(config.threshold.div(10))
+            expect(applicantBalanceAfter.sub(applicantBalanceBefore)).to.equal(config.threshold.mul(9).div(10))
+            expect(escrowBefore.sub(escrowAfter)).to.equal(config.threshold)
+
+            await expect(plantoidAsSupporter.withdrawFor(supporter.address)).to.be.revertedWith(errorMessages.nothingToWithdraw)
+        })
+
+        // Allows new round to start before spawn if threshold met
+        it('Allows new round to start before withdrawl if threshold still met', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold.mul(2) })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsSupporter.settleRound()
+
+            await plantoidAsApplicant.startProposals()
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(1)
+
+        })
+
+        it('Does not allow new round to start using escrowed funds', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsSupporter.settleRound()
+
+            await expect(plantoidAsApplicant.startProposals()).to.be.revertedWith(errorMessages.belowThreshold)
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
+        })
+
+        it('Winner can spawn once', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsSupporter.settleRound()
+
+            await plantoidAsApplicant.spawn(
                 0,
-                plantoidOracle.address,
-                accounts[0].address,
-                [config.depositThreshold,
-                config.threshold],
-                [config.votingPeriod, config.gracePeriod, config.settlePeriod, config.extPeriod],
-                config.name,
-                config.symbol,
-                config.prereveal
+                plantoidAsOracle.address,
+                ethers.utils.parseEther('0.01'),
+                ethers.utils.parseEther('2'),
+                config.proposalPeriod,
+                config.votingPeriod,
+                config.gracePeriod,
+                'Plantoid2',
+                'P2',
+                'prereveal2'
             )
-            const plantoid = await getNewPlantoidAddress(tx)
 
-            const newPlantoid = (await Plantoid.attach(plantoid)) as Plantoid
+            const salt = await plantoidAsApplicant.salts(0)
+            const newPlantoidAddress = await plantoidSpawn.plantoidAddress(plantoidInstance.address, salt)
+            expect(newPlantoidAddress.exists).to.equal(true)
+        })
+        it('Winner cannot spawn multiple times', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
 
-            expect(await newPlantoid.artist()).to.equal(applicant.address)
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsSupporter.settleRound()
+
+            await plantoidAsApplicant.spawn(
+                0,
+                plantoidAsOracle.address,
+                ethers.utils.parseEther('0.01'),
+                ethers.utils.parseEther('2'),
+                config.proposalPeriod,
+                config.votingPeriod,
+                config.gracePeriod,
+                'Plantoid2',
+                'P2',
+                'prereveal2'
+            )
+            await expect(
+                plantoidAsApplicant.spawn(
+                    0,
+                    plantoidAsOracle.address,
+                    ethers.utils.parseEther('0.01'),
+                    ethers.utils.parseEther('2'),
+                    config.proposalPeriod,
+                    config.votingPeriod,
+                    config.gracePeriod,
+                    'Plantoid2',
+                    'P2',
+                    'prereveal2'
+                )
+            ).to.be.revertedWith(errorMessages.cannotSpawn)
+        })
+        it('Non winners cannot spawn', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsSupporter.settleRound()
+
+            await expect(
+                plantoidAsSupporter.spawn(
+                    0,
+                    plantoidAsOracle.address,
+                    ethers.utils.parseEther('0.01'),
+                    ethers.utils.parseEther('2'),
+                    config.proposalPeriod,
+                    config.votingPeriod,
+                    config.gracePeriod,
+                    'Plantoid2',
+                    'P2',
+                    'prereveal2'
+                )
+            ).to.be.revertedWith(errorMessages.cannotSpawn)
+        })
+
+        it('Cannot spawn if settled invalid', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+            const lastRoundState = await plantoidAsApplicant.roundState(0)
+            expect(lastRoundState).to.equal(5)
+            const lastRound = await plantoidAsApplicant.rounds(0)
+
+            const currentRoundState = await plantoidAsApplicant.currentRoundState()
+            expect(currentRoundState._round).to.equal(1)
+            expect(currentRoundState._state).to.equal(0)
+
+            await expect(
+                plantoidAsApplicant.spawn(
+                    0,
+                    plantoidAsOracle.address,
+                    ethers.utils.parseEther('0.01'),
+                    ethers.utils.parseEther('2'),
+                    config.proposalPeriod,
+                    config.votingPeriod,
+                    config.gracePeriod,
+                    'Plantoid2',
+                    'P2',
+                    'prereveal2'
+                )
+            ).to.be.revertedWith(errorMessages.cannotSpawn)
+        })
+
+        it('Transfers percentages properly in second generation', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsSupporter.settleRound()
+
+            await plantoidAsApplicant.spawn(
+                0,
+                plantoidAsOracle.address,
+                ethers.utils.parseEther('0.01'),
+                ethers.utils.parseEther('2'),
+                config.proposalPeriod,
+                config.votingPeriod,
+                config.gracePeriod,
+                'Plantoid2',
+                'P2',
+                'prereveal2'
+            )
+
+            const salt = await plantoidAsApplicant.salts(0)
+            const newPlantoidAddress = await plantoidSpawn.plantoidAddress(plantoidInstance.address, salt)
+            expect(newPlantoidAddress.exists).to.equal(true)
+
+            const newThreshold = ethers.utils.parseEther('2')
+
+            const newPlantoidInstance = (await Plantoid.attach(newPlantoidAddress.addr)) as Plantoid
+            const newPlantoidAsApplicant = newPlantoidInstance.connect(secondCreator)
+            const newPlantoidAsSupporter = newPlantoidInstance.connect(supporter)
+
+            await supporter.sendTransaction({ to: newPlantoidInstance.address, value: ethers.utils.parseEther('2') })
+            await newPlantoidAsApplicant.startProposals()
+            await newPlantoidAsApplicant.submitProposal('test.com')
+            await newPlantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await newPlantoidAsApplicant.advanceRound()
+
+            await newPlantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await newPlantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            const firstPlantoidBalanceBefore = await newPlantoidInstance.withdrawableBalances(plantoidInstance.address)
+            const artistBalanceBefore = await newPlantoidInstance.withdrawableBalances(applicant.address)
+            const applicantBalanceBefore = await newPlantoidInstance.withdrawableBalances(secondCreator.address)
+
+            await newPlantoidAsSupporter.settleRound()
+
+            const firstPlantoidBalanceAfter = await newPlantoidInstance.withdrawableBalances(plantoidInstance.address)
+            const artistBalanceAfter = await newPlantoidInstance.withdrawableBalances(applicant.address)
+            const applicantBalanceAfter = await newPlantoidInstance.withdrawableBalances(secondCreator.address)
+
+            expect(artistBalanceAfter.sub(artistBalanceBefore)).to.equal(newThreshold.div(10))
+            expect(firstPlantoidBalanceAfter.sub(firstPlantoidBalanceBefore)).to.equal(newThreshold.div(10))
+            expect(applicantBalanceAfter.sub(applicantBalanceBefore)).to.equal(newThreshold.mul(8).div(10))
+        })
+
+        it('Allows parties to withdraw second gen', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await plantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await plantoidAsSupporter.settleRound()
+
+            await plantoidAsApplicant.spawn(
+                0,
+                plantoidAsOracle.address,
+                ethers.utils.parseEther('0.01'),
+                ethers.utils.parseEther('2'),
+                config.proposalPeriod,
+                config.votingPeriod,
+                config.gracePeriod,
+                'Plantoid2',
+                'P2',
+                'prereveal2'
+            )
+
+            const salt = await plantoidAsApplicant.salts(0)
+            const newPlantoidAddress = await plantoidSpawn.plantoidAddress(plantoidInstance.address, salt)
+            expect(newPlantoidAddress.exists).to.equal(true)
+
+            const newThreshold = ethers.utils.parseEther('2')
+
+            const newPlantoidInstance = (await Plantoid.attach(newPlantoidAddress.addr)) as Plantoid
+            const newPlantoidAsApplicant = newPlantoidInstance.connect(secondCreator)
+            const newPlantoidAsSupporter = newPlantoidInstance.connect(supporter)
+
+            await supporter.sendTransaction({ to: newPlantoidInstance.address, value: ethers.utils.parseEther('2') })
+            await newPlantoidAsApplicant.startProposals()
+            await newPlantoidAsApplicant.submitProposal('test.com')
+            await newPlantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await newPlantoidAsApplicant.advanceRound()
+
+            await newPlantoidAsSupporter.submitVote(0)
+            await fastForwardTime(config.votingPeriod)
+
+            await newPlantoidAsApplicant.advanceRound()
+
+            await fastForwardTime(config.gracePeriod)
+
+            await newPlantoidAsSupporter.settleRound()
+
+            const artistBalanceBefore = await provider.getBalance(applicant.address)
+            const applicantBalanceBefore = await provider.getBalance(secondCreator.address)
+            const firstPlantoidBalanceBefore = await provider.getBalance(plantoidInstance.address)
+
+            await newPlantoidAsSupporter.withdrawFor(applicant.address)
+            await newPlantoidAsSupporter.withdrawFor(secondCreator.address)
+            await newPlantoidAsSupporter.withdrawFor(plantoidInstance.address)
+
+            const artistBalanceAfter = await provider.getBalance(applicant.address)
+            const applicantBalanceAfter = await provider.getBalance(secondCreator.address)
+            const firstPlantoidBalanceAfter = await provider.getBalance(plantoidInstance.address)
+
+            expect(artistBalanceAfter.sub(artistBalanceBefore)).to.equal(newThreshold.div(10))
+            expect(applicantBalanceAfter.sub(applicantBalanceBefore)).to.equal(newThreshold.mul(8).div(10))
+            expect(firstPlantoidBalanceAfter.sub(firstPlantoidBalanceBefore)).to.equal(newThreshold.div(10))
+
+            await expect(newPlantoidAsSupporter.withdrawFor(supporter.address)).to.be.revertedWith(errorMessages.nothingToWithdraw)
+        })
+
+        it('Returns the total votes in a round', async function () {
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: config.threshold })
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
+            await supporter.sendTransaction({ to: plantoidInstance.address, value: ethers.utils.parseEther('0.01') })
+            await plantoidAsApplicant.startProposals()
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+            await plantoidAsApplicant.submitProposal('test.com')
+
+            await fastForwardTime(config.proposalPeriod)
+            await plantoidAsApplicant.advanceRound()
+
+            await plantoidAsSupporter.submitVote(0)
+            const roundState = await plantoidInstance.rounds(0)
+
+            expect(roundState.totalVotes).to.equal(6)
         })
     })
-})
 
+    // Plantoid metadata
+    // Anyone can submit reveal with valid signature
+    // Cannot reveal with invalid signature
+})

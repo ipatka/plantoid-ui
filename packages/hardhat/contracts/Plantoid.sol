@@ -94,7 +94,9 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
     uint256
         public gracePeriod; /*Time between voting ended and when vote can settle*/
 
-    uint256 public salt;
+    mapping(uint256 => bytes32) public salts;
+
+    mapping(address => uint256) public withdrawableBalances;
 
     /*****************
     Minting state mgmt
@@ -278,28 +280,37 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
         ) {
             // Find winning proposal
             uint256 maxVotes;
+            bool tieDetected;
             for (
                 uint256 index = 0;
                 index < currentRound.proposalCount;
                 index++
             ) {
+                // First detect tie condition (current proposal matches max votes)
                 if (
+                    (currentRound.proposals[index].votes == maxVotes) &&
+                    (!currentRound.proposals[index].vetoed)
+                )
+                    tieDetected = true;
+                    // If not tie, detect win condition
+                else if (
                     (currentRound.proposals[index].votes > maxVotes) &&
                     (!currentRound.proposals[index].vetoed)
                 ) {
                     maxVotes = currentRound.proposals[index].votes;
                     currentRound.winningProposal = index;
+                    tieDetected = false;
                 }
             }
 
-            // If no winning proposal (all vetoed) return escrow and complete
-            if (maxVotes == 0) {
+            // If no winning proposal (all vetoed or tie detected) return escrow and complete
+            if (maxVotes == 0 || tieDetected) {
                 invalidateRound();
             } else {
                 currentRound.roundState = RoundState.Completed;
                 emit ProposalAccepted(round, currentRound.winningProposal);
-                _transferFundsToArtist(round);
                 round++;
+                _transferFundsToArtist(round - 1);
             }
         } else {
             revert CannotAdvance();
@@ -311,20 +322,33 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
         if (currentRound.fundsDistributed) revert AlreadyDistributed();
         else {
             currentRound.fundsDistributed = true;
-            uint256 _fundsToDistribute = escrow;
-            escrow -= threshold; /*Reduce escrow balance*/
+            uint256 _fundsToDistribute = threshold;
+            // escrow -= threshold; /*Reduce escrow balance*/
 
             uint256 _toParentOrArtist = (threshold * 10) / 100;
             _fundsToDistribute -= _toParentOrArtist;
-            artist.safeTransferETH(_toParentOrArtist);
+            // artist.safeTransferETH(_toParentOrArtist);
+            withdrawableBalances[artist] += _toParentOrArtist;
             if (parent != address(0)) {
                 _fundsToDistribute -= _toParentOrArtist;
-                parent.safeTransferETH(_toParentOrArtist);
+                // parent.safeTransferETH(_toParentOrArtist);
+                withdrawableBalances[parent] += _toParentOrArtist;
             }
-            payable(
+            // payable(
+            //     currentRound.proposals[currentRound.winningProposal].proposer
+            // ).safeTransferETH(_fundsToDistribute);
+            withdrawableBalances[
                 currentRound.proposals[currentRound.winningProposal].proposer
-            ).safeTransferETH(_fundsToDistribute);
+            ] += _fundsToDistribute;
         }
+    }
+
+    function withdrawFor(address payable recipient) external {
+        if (withdrawableBalances[recipient] == 0) revert NothingToWithdraw();
+        uint256 _fundsToSend = withdrawableBalances[recipient];
+        escrow -= _fundsToSend; /*Reduce escrow balance*/
+        withdrawableBalances[recipient] = 0;
+        payable(recipient).safeTransferETH(_fundsToSend);
     }
 
     /// @dev Propose reproduction if threshold is reached
@@ -458,7 +482,8 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
         if (
             (currentRound.proposals[currentRound.winningProposal].proposer !=
                 msg.sender) || (currentRound.roundState != RoundState.Completed)
-        ) revert NotWinner();
+        ) revert CannotSpawn();
+        rounds[_round].roundState = RoundState.Spawned;
         bytes memory initData = abi.encodeWithSignature(
             "init(address,address,address,string,string,string,bytes)",
             _newPlantoid,
@@ -469,8 +494,8 @@ contract Plantoid is IPlantoid, ERC721Checkpointable, OwnableUpgradeable {
             _prerevealUri,
             _periodsAndThresholds
         );
-        salt++;
-        _plantoid = _spawner.spawnPlantoid(bytes32(salt), initData);
+        salts[_round] = blockhash(block.number - 1);
+        _plantoid = _spawner.spawnPlantoid(salts[_round], initData);
         emit NewSpawn(
             _round,
             address(_spawner),

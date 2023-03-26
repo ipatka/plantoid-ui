@@ -31,6 +31,8 @@ contract IPlantoid {
     error AlreadyVoted();
     error NotArtist();
     error NotWinner();
+    error CannotSpawn();
+    error NothingToWithdraw();
     error FailedToSendETH();
     error FailedToSpawn();
 
@@ -66,7 +68,8 @@ contract IPlantoid {
         Completed,
         Invalid,
         NeedsAdvancement,
-        NeedsSettlement
+        NeedsSettlement,
+        Spawned
     }
 
     struct Proposal {
