@@ -102,7 +102,22 @@ export default function Reveal({
         };
       else return { ...g, };
     });
+  
+    const remainData = [];
+    graphData?.seeds.map(s => {
+      if (s?.holder?.address.toLowerCase() == address.toLowerCase()) {
+        console.log('remove ',s);
+        // do nothing
+      } else {
+        console.log('do not remove ',s)
+        remainData.push(s);
+      }
+    })
+
+    // console.log( graphData.seeds)
     console.log({ combinedData });
+    console.log({remainData});
+    
     return (
       <div>
         <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
@@ -118,7 +133,7 @@ export default function Reveal({
           {/* ) : ( */}
             <br/>Reveal other people's NFTs<br/>
             <Table
-              dataSource={_.sortBy(graphData?.seeds, function (o) {
+              dataSource={_.sortBy(remainData, function (o) {
                 return Number(o.tokenId);
               })}
               columns={revealColumns}

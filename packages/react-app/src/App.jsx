@@ -447,7 +447,7 @@ function App(props) {
 
         {/* only display these menu items, if the connected users is the plantoid  */}
 
-        {/* {plantoidAddress} */}
+        {owner}
         {/* { (address == plantoidAddress) && (<span> FUCK </span>) }   */}
 
         <Menu.Item key="/subgraph">
