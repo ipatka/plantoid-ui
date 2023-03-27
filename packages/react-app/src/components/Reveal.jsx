@@ -104,7 +104,7 @@ export default function Reveal({
         <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
           {graphData && graphData.holder ? (
             <Table
-              dataSource={_.sortBy(graphData.holder.seeds, function (o) {
+              dataSource={_.sortBy(combinedData, function (o) {
                 return Number(o.tokenId);
               })}
               columns={revealColumns}
