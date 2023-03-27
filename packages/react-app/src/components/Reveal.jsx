@@ -90,6 +90,7 @@ export default function Reveal({
   if (address) {
     console.log("GRAPH DATA!!!!!!!! ", graphData);
     const combinedData = graphData?.holder.seeds.map(g => {
+      if (!data.plantoidMetadata) return { ...g };
       const revealData = data.plantoidMetadata.seedMetadatas.find(s => s.id === g.id);
       console.log({ revealData });
       if (revealData)
@@ -97,6 +98,7 @@ export default function Reveal({
           ...g,
           ...revealData,
         };
+      else return { ...g };
     });
     console.log({ combinedData });
     return (
