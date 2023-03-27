@@ -89,7 +89,7 @@ export default function Reveal({
   console.log({ graphData });
   if (address) {
     console.log("GRAPH DATA!!!!!!!! ", graphData);
-    const combinedData = graphData?.holder.seeds.map(g => {
+    const combinedData = graphData?.holder?.seeds.map(g => {
       if (!data) return { ...g };
       const revealData = data.plantoidMetadata.seedMetadatas.find(s => s.id === g.id);
       console.log({ revealData });
