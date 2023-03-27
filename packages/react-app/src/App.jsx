@@ -583,7 +583,7 @@ function App(props) {
         </Route>
         <Route exact path="/reveal">
           {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
-          {/* <Reveal
+          <Reveal
             address={address}
             plantoidAddress={plantoidAddress}
             userSigner={userSigner}
@@ -592,7 +592,7 @@ function App(props) {
             round={round}
             roundState={roundState}
             mainnetProvider={mainnetProvider}
-          ></Reveal> */}
+          ></Reveal>
         </Route>
 
         <Route exact path="/about">
