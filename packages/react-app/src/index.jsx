@@ -12,7 +12,7 @@ const themes = {
 };
 
 
-const subgraphUri = "https://api.thegraph.com/subgraphs/name/ipatka/plantoid-testnet"
+const subgraphUri = "https://api.thegraph.com/subgraphs/name/ipatka/plantoid-mainnet"
 // const subgraphUri = "http://localhost:8000/subgraphs/name/scaffold-eth/your-contract";
 
 const client = new ApolloClient({

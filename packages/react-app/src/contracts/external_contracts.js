@@ -2418,6 +2418,14 @@ const PlantoidABI = [
 ];
 // Mainnet DAI, Optimism and Arbitrium Rollup Contracts with local addresses
 module.exports = {
+  1: {
+    contracts: {
+      plantoid: {
+        address: "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1",
+        abi: PlantoidABI,
+      },
+    },
+  },
   4: {
     contracts: {
       plantoid: {
