@@ -18,6 +18,7 @@ import "graphiql/graphiql.min.css";
 import fetch from "isomorphic-fetch";
 import "./App.css";
 import {
+  About,
   Account,
   Contract,
   Address,
@@ -282,8 +283,10 @@ function App(props) {
   // keep track of a variable from the contract in the local React state:
 
   const artist = useContractReader(readContracts, "plantoid", "artist");
+  const owner  = useContractReader(readContracts, "plantoid", "owner"); 
 
   console.log({ artist });
+  console.log({owner})
 
   const plantoidAddressRead = readContracts?.plantoid?.address;
 
@@ -376,7 +379,9 @@ function App(props) {
   return (
     <div className="App">
       {/* ✏️ Edit the header and change the title to your project name */}
-      <Header title="🥀 Plantoid" link="http://plantoid.org" subTitle="Feed me">
+      <Header title="🥀 Plantoid" link="http://plantoid.org" subTitle="a blockchain-based life-form">
+
+
         {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
         <div style={{ position: "relative", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", flex: 1 }}>
@@ -390,9 +395,9 @@ function App(props) {
               </div>
             )}
             <Account
-              useBurner={USE_BURNER_WALLET}
+              // useBurner={USE_BURNER_WALLET}
               address={address}
-              localProvider={localProvider}
+              // localProvider={localProvider}
               userSigner={userSigner}
               mainnetProvider={mainnetProvider}
               price={price}
@@ -403,18 +408,21 @@ function App(props) {
             />
           </div>
         </div>
+
+        
       </Header>
+
       {yourLocalBalance.lte(ethers.BigNumber.from("0")) && (
         <FaucetHint localProvider={localProvider} targetNetwork={targetNetwork} address={address} />
       )}
-      <NetworkDisplay
+      {/* <NetworkDisplay
         NETWORKCHECK={NETWORKCHECK}
         localChainId={localChainId}
         selectedChainId={selectedChainId}
         targetNetwork={targetNetwork}
         logoutOfWeb3Modal={logoutOfWeb3Modal}
         USE_NETWORK_SELECTOR={USE_NETWORK_SELECTOR}
-      />
+      /> */}
 
       <div>
         <hr class="style-eight"></hr>
@@ -428,14 +436,25 @@ function App(props) {
 
       <Menu style={{ textAlign: "center", marginTop: 20 }} selectedKeys={[location.pathname]} mode="horizontal">
         <Menu.Item key="/">
-          <Link to="/">Feed</Link>
+          <Link to="/">Feed Plantoid</Link>
         </Menu.Item>
         <Menu.Item key="/reveal">
-          <Link to="/reveal">Reveal</Link>
+          <Link to="/reveal">Claim NFTs</Link>
         </Menu.Item>
+        <Menu.Item key="/about">
+          <Link to="/about">About</Link>
+        </Menu.Item>
+
+
+        {/* only display these menu items, if the connected users is the plantoid  */}
+
+          {/* {plantoidAddress} */}
+          {/* { (address == plantoidAddress) && (<span> FUCK </span>) }   */}
+
         <Menu.Item key="/subgraph">
           <Link to="/subgraph">Subgraph</Link>
         </Menu.Item>
+
         <Menu.Item key="/contracts">
           <Link to="/contracts">Contracts</Link>
         </Menu.Item>
@@ -449,39 +468,46 @@ function App(props) {
               <h2>Plantoid #13</h2>
               <Divider />
               <div style={{ margin: 8 }}></div>
-              Hello !<br/>
-              <br/>
 
             <table>
-            <td>
-              <Image 
-                width={200}
-                height={370}
-                src="https://gateway.pinata.cloud/ipfs/QmQMna9Y3voEHJEZN4YEn9f35ivmr61sernPTbScRcEZzT"
+            <td  >
+              <Image style={{border: "1px solid ", marginLeft: "-50px" }}
+                width={350}
+                height={520}
+                src="https://gateway.pinata.cloud/ipfs/QmcNY71soxdqjNhhwQkfLFDGRx4kaVva7ERFiNWa1ZFk5m"
               />
              </td>
-              <td>
-              <table>
-                <td>Smart Contract:</td>
-             <td><Address
-                address={plantoidAddress}
-                ensProvider={mainnetProvider}
-                blockExplorer={blockExplorer}
-                fontSize={20}
-              /></td><tr/>
-              <td>Artist:  </td>
-              <td><Address address={artist} ensProvider={mainnetProvider} blockExplorer={blockExplorer} fontSize={20} /></td>
-              <tr/><td><Divider /></td>
-              Current balance: {ethers.utils.formatEther(plantoidBalance.toString())} <br />
-              Required threshold: {threshold ? ethers.utils.formatEther(threshold.toString()) : "???"} <br />
-              Currently in escrow: {escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}
+              <td valign='top'>
+              
+              <table align="right">
+                <td  align="right">Smart Contract:</td>
+                <td><Address
+                    address={plantoidAddress}
+                    ensProvider={mainnetProvider}
+                    blockExplorer={blockExplorer}
+                    fontSize={24}
+                  /></td>
+                <tr/>
+
+                <td align="right">Artist:  </td>
+                <td><Address address={artist} ensProvider={mainnetProvider} blockExplorer={blockExplorer} fontSize={24} /></td>
+                <tr/>
+
+                <td><Divider /></td><tr/>
+
+              <td align="right">Current balance:</td>
+              <td> {ethers.utils.formatEther(plantoidBalance.toString())}</td><tr/>
+              <td>Required threshold:</td>
+              <td>{threshold ? ethers.utils.formatEther(threshold.toString()) : "???"}</td><tr/>
+              <td>Currently in escrow:</td>
+              <td>{escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}</td>
              
               </table>
               </td> 
              </table> 
               
               <Divider />
-              Feed me !
+              <h2>Feed me !</h2>
               <EtherInput
                 price={price}
                 value={txValue}
@@ -556,6 +582,11 @@ function App(props) {
             mainnetProvider={mainnetProvider}
           ></Reveal>
         </Route>
+
+        <Route exact path="/about">
+          <About></About>
+        </Route>
+
         <Route path="/subgraph">
           <Subgraph
             subgraphUri={props.subgraphUri}
@@ -596,7 +627,7 @@ function App(props) {
 
       {/* 🗺 Extra UI like gas price, eth price, faucet, and support: */}
       <div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
-        <Row align="middle" gutter={[4, 4]}>
+        {/* <Row align="middle" gutter={[4, 4]}>
           <Col span={8}>
             <Ramp price={price} address={address} networks={NETWORKS} />
           </Col>
@@ -618,7 +649,7 @@ function App(props) {
               Support
             </Button>
           </Col>
-        </Row>
+        </Row> */}
 
         <Row align="middle" gutter={[4, 4]}>
           <Col span={24}>

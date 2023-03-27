@@ -7,6 +7,8 @@ import PlantoidABI from "../contracts/plantoid";
 import PlantoidMetdataABI from "../contracts/plantoidMetadata";
 import { Address } from "../components";
 
+import _ from 'lodash';
+
 const { ethers } = require("ethers");
 
 export default function Reveal({ address, userSigner, user, graphData, round, roundState, mainnetProvider }) {
@@ -24,6 +26,9 @@ export default function Reveal({ address, userSigner, user, graphData, round, ro
       title: "Seed",
       key: "token",
       render: record => record.tokenId,
+      // sorter: {
+      //   compare: (a,b) => a.tokenId - b.tokenId
+      // }
     },
     {
       title: "Reveal",
@@ -58,7 +63,7 @@ export default function Reveal({ address, userSigner, user, graphData, round, ro
     return (
       <div>
       <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
-        {graphData ? <Table dataSource={graphData.holder.seeds} columns={revealColumns} rowKey="id" /> : <span>No data</span>}
+        {graphData && graphData.holder ? <Table dataSource={ _.sortBy(graphData.holder.seeds, function(o) {return Number(o.tokenId)})} columns={revealColumns} rowKey="id" /> : <span>No data</span>}
       </div>
     </div>
     )
