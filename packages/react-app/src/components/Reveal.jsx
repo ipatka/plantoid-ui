@@ -22,6 +22,7 @@ export default function Reveal({
   roundState,
   mainnetProvider,
 }) {
+
   // merge graph data from front page to graph data here
   const MD_QUERY = gql`
     query MdQuery($id: String) @api(contextKey: "apiName") {
@@ -60,7 +61,7 @@ export default function Reveal({
       // }
     },
     {
-      title: "Reveal",
+      title: "Reveal NFT",
       key: "reveal",
       render: record => (
         <div>
@@ -80,7 +81,7 @@ export default function Reveal({
       ),
     },
     {
-      title: "URI",
+      title: "Metadata URI",
       key: "uri",
       render: record => record.uri,
     },
@@ -91,20 +92,22 @@ export default function Reveal({
     console.log("GRAPH DATA!!!!!!!! ", graphData);
     const combinedData = graphData?.holder?.seeds.map(g => {
       if (!data) return { ...g };
-      const revealData = data.plantoidMetadata.seedMetadatas.find(s => s.id === g.id);
+      const revealData  = data.plantoidMetadata.seedMetadatas.find(s => s.id === g.id);
+      console.log("........................................\n");
       console.log({ revealData });
       if (revealData)
         return {
           ...g,
           ...revealData,
         };
-      else return { ...g };
+      else return { ...g, };
     });
     console.log({ combinedData });
     return (
       <div>
         <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
-          {graphData && graphData.holder ? (
+          {/* {graphData && graphData.holder ? ( */}
+            <br/>Reveal your own NFTs<br/>
             <Table
               dataSource={_.sortBy(combinedData, function (o) {
                 return Number(o.tokenId);
@@ -112,9 +115,18 @@ export default function Reveal({
               columns={revealColumns}
               rowKey="id"
             />
-          ) : (
-            <span>No data</span>
-          )}
+          {/* ) : ( */}
+            <br/>Reveal other people's NFTs<br/>
+            <Table
+              dataSource={_.sortBy(graphData?.seeds, function (o) {
+                return Number(o.tokenId);
+              })}
+              columns={revealColumns}
+              rowKey="id"
+            />
+
+            
+          {/* )} */}
         </div>
       </div>
     );
