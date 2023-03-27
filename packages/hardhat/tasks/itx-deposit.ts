@@ -18,6 +18,8 @@ task('itx-deposit', 'ITX: Deposit founds to ITX')
             // ITX deposit contract (same address for all public Ethereum networks)
             to: '0x015C7C7A7D65bbdb117C573007219107BD7486f9',
             value: ethers.utils.parseUnits(taskArgs.amount, 'ether'),
+            maxFeePerGas: ethers.utils.parseUnits('700', 'gwei'),
+            maxPriorityFeePerGas: ethers.utils.parseUnits('100', 'gwei'),
         })
         console.log('Waiting for transaction to be mined: ', tx.hash)
 

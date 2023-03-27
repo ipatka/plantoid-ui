@@ -20,7 +20,7 @@ templates:
         - Round
       abis:
         - name: Plantoid
-          file: ./abis/goerli_Plantoid.json
+          file: ./abis/mainnet_Plantoid.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,indexed uint256) 
           handler: handleSeedTransfer
@@ -46,30 +46,12 @@ templates:
           handler: handleReveal
 dataSources:
   - kind: ethereum/contract
-    name: PlantoidMetadata
-    network: matic
-    source:
-      address: "{{goerli_PlantoidMetadataAddress}}"
-      abi: PlantoidMetadata
-    mapping:
-      kind: ethereum/events
-      apiVersion: 0.0.5
-      language: wasm/assemblyscript
-      file: ./src/mapping.ts
-      entities:
-        - Seed
-      abis:
-        - name: PlantoidMetadata
-          file: ./abis/goerli_PlantoidMetadata.json
-      eventHandlers:
-        - event: MetadataRevealed(address,uint256,string,bytes)
-          handler: handleMetadataReveal
-  - kind: ethereum/contract
     name: PlantoidSpawn
     network: mainnet
     source:
-      address: "{{goerli_PlantoidSpawnAddress}}"
+      address: "0xef0Dae31395821633B1E0DfEab4B0f6AF358cDB1"
       abi: PlantoidSpawn
+      startBlock: 16919053
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.5
@@ -79,7 +61,7 @@ dataSources:
         - Spawner
       abis:
         - name: PlantoidSpawn
-          file: ./abis/goerli_PlantoidSpawn.json
+          file: ./abis/mainnet_PlantoidSpawn.json
       eventHandlers:
         - event: PlantoidSpawned(indexed address)
           handler: handleNewPlantoid

@@ -70,7 +70,7 @@ const networks = {
     mainnet: {
         url: 'https://mainnet.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad', // <---- YOUR INFURA ID! (or it won't work)
         //      url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXXXX/eth/mainnet", // <---- YOUR MORALIS ID! (not limited to infura)
-        gasPrice: mainnetGwei * 1000000000,
+        // gasPrice: mainnetGwei * 1000000000,
         accounts: {
             mnemonic: mnemonic(),
         },
@@ -113,7 +113,7 @@ const networks = {
     polygon: {
         url: 'https://polygon-rpc.com',
         // url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXx/polygon/mainnet", // <---- YOUR MORALIS ID! (not limited to infura)
-        gasPrice: 3200000000,
+        gasPrice: 32000000000,
         accounts: {
             mnemonic: mnemonic(),
         },
@@ -128,7 +128,7 @@ const networks = {
     },
     matic: {
         url: 'https://rpc-mainnet.maticvigil.com/',
-        gasPrice: 250000000000,
+        // gasPrice: 450000000000,
         accounts: {
             mnemonic: mnemonic(),
         },
@@ -295,6 +295,7 @@ module.exports = {
             mainnet: 'DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW',
             rinkeby: 'DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW',
             goerli: 'DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW',
+            polygon: '9QW4RIZ2EPRSYMPN54FQ4EZIMUX2G9AJPW',
             // add other network's API key here
         },
     },

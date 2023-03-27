@@ -12,17 +12,17 @@ const { ethers } = require("hardhat");
 const zeroAddress = "0x0000000000000000000000000000000000000000";
 
 const config = {
-  plantoidOracleAddress: "0x1f028f240A90414211425bFa38eB4917Cb32c39C",
-  artistAddress: "0x1f028f240A90414211425bFa38eB4917Cb32c39C",
+  plantoidOracleAddress: "0x7e6ce11beE2AB7F84eF0D1955CE1F546D897aB98",
+  artistAddress: "0x2D3C242d2C074D523112093C67d1c01Bb27ca40D",
   parentAddress: zeroAddress,
-  depositThreshold: ethers.utils.parseEther("0.0001"),
-  threshold: ethers.utils.parseEther("0.001"),
-  name: "Plantoid",
+  depositThreshold: ethers.utils.parseEther("0.001"),
+  threshold: ethers.utils.parseEther("5"),
+  name: "Plantoid 13",
   prereveal: "ipfs://QmXTzn3ZMvsYnfJKXcKQ2PVHH2YNbdUDED1GM2DEuMHmzH",
   symbol: "PLANTOID",
-  proposalPeriod: 100,
-  votingPeriod: 100,
-  gracePeriod: 100,
+  proposalPeriod: 1209600, // 2 weeks
+  votingPeriod: 604800,
+  gracePeriod: 604800,
 };
 
 module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
@@ -31,61 +31,61 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   
   console.log({deployer})
 
-  const tx = await deploy("Plantoid", {
-    from: deployer,
-    args: [],
-    log: true,
-    waitConfirmations: 2,
-  });
-  const tx2 = await deploy("PlantoidSpawn", {
-    from: deployer,
-    args: [tx.receipt.contractAddress],
-    log: true,
-    waitConfirmations: 2,
-  });
+  // const tx = await deploy("Plantoid", {
+  //   from: deployer,
+  //   args: [],
+  //   log: true,
+  //   waitConfirmations: 2,
+  // });
+  // const tx2 = await deploy("PlantoidSpawn", {
+  //   from: deployer,
+  //   args: [tx.receipt.contractAddress],
+  //   log: true,
+  //   waitConfirmations: 2,
+  // });
   const tx3 = await deploy("PlantoidMetadata", {
     from: deployer,
     args: [],
     log: true,
     waitConfirmations: 2,
   });
-  const plantoid = await ethers.getContractAt(
-    "Plantoid",
-    tx.receipt.contractAddress
-  ); //<-- if you want to instantiate a version of a contract at a specific address!
-  const plantoidSpawn = await ethers.getContractAt(
-    "PlantoidSpawn",
-    tx2.receipt.contractAddress
-  ); //<-- if you want to instantiate a version of a contract at a specific address!
-  const plantoidMetadata = await ethers.getContractAt(
-    "PlantoidMetadata",
-    tx3.receipt.contractAddress
-  ); //<-- if you want to instantiate a version of a contract at a specific address!
-  await plantoidMetadata.transferOwnership(config.plantoidOracleAddress);
-  const initAction = plantoid.interface.encodeFunctionData("init", [
-    config.plantoidOracleAddress,
-    config.artistAddress,
-    config.parentAddress,
-    config.name,
-    config.symbol,
-    config.prereveal,
-    ethers.utils.defaultAbiCoder.encode(
-      ["uint256", "uint256", "uint256", "uint256", "uint256"],
-      [
-        config.depositThreshold,
-        config.threshold,
-        config.proposalPeriod,
-        config.votingPeriod,
-        config.gracePeriod,
-      ]
-    ),
-  ]);
-  const salt = ethers.utils.keccak256(
-    ethers.utils.defaultAbiCoder.encode(["uint256"], [1])
-  );
-  console.log({ deployer });
-  await plantoidSpawn.spawnPlantoid(salt, initAction);
-  const plantoidAddress = await plantoidSpawn.plantoidAddress(deployer, salt);
+  // const plantoid = await ethers.getContractAt(
+  //   "Plantoid",
+  //   tx.receipt.contractAddress
+  // ); //<-- if you want to instantiate a version of a contract at a specific address!
+  // const plantoidSpawn = await ethers.getContractAt(
+  //   "PlantoidSpawn",
+  //   tx2.receipt.contractAddress
+  // ); //<-- if you want to instantiate a version of a contract at a specific address!
+  // const plantoidMetadata = await ethers.getContractAt(
+  //   "PlantoidMetadata",
+  //   tx3.receipt.contractAddress
+  // ); //<-- if you want to instantiate a version of a contract at a specific address!
+  // await plantoidMetadata.transferOwnership(config.plantoidOracleAddress);
+  // const initAction = plantoid.interface.encodeFunctionData("init", [
+  //   config.plantoidOracleAddress,
+  //   config.artistAddress,
+  //   config.parentAddress,
+  //   config.name,
+  //   config.symbol,
+  //   config.prereveal,
+  //   ethers.utils.defaultAbiCoder.encode(
+  //     ["uint256", "uint256", "uint256", "uint256", "uint256"],
+  //     [
+  //       config.depositThreshold,
+  //       config.threshold,
+  //       config.proposalPeriod,
+  //       config.votingPeriod,
+  //       config.gracePeriod,
+  //     ]
+  //   ),
+  // ]);
+  // const salt = ethers.utils.keccak256(
+  //   ethers.utils.defaultAbiCoder.encode(["uint256"], [1])
+  // );
+  // console.log({ deployer });
+  // await plantoidSpawn.spawnPlantoid(salt, initAction);
+  // const plantoidAddress = await plantoidSpawn.plantoidAddress(deployer, salt);
   // const tx = await deploy("TipRelayer", {
   //   from: deployer,
   //   args: [
@@ -94,7 +94,7 @@ module.exports = async ({ getNamedAccounts, deployments, getChainId }) => {
   //   waitConfirmations: 5,
   // });
 
-  console.log({ plantoidAddress });
+  // console.log({ plantoidAddress });
   /*  await YourContract.setPurpose("Hello");
   
     To take ownership of yourContract using the ownable library uncomment next line and add the 
