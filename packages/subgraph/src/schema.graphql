@@ -10,6 +10,21 @@ type Seed @entity {
     revealedUri: String
 }
 
+type SeedMetadata @entity {
+    id: ID!
+    plantoid: PlantoidMetadata!
+    tokenId: BigInt!
+    createdAt: BigInt!
+    revealedSignature: Bytes
+    revealedUri: String
+}
+
+type PlantoidMetadata @entity {
+    id: ID!
+    address: Bytes!
+    seedMetadatas: [SeedMetadata!] @derivedFrom(field: "plantoid")
+}
+
 type Holder @entity {
     id: ID!
     address: Bytes!
