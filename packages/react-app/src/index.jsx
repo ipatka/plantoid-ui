@@ -1,4 +1,6 @@
-import { ApolloClient, ApolloProvider, InMemoryCache } from "@apollo/client";
+import { ApolloClient, ApolloProvider, InMemoryCache, ApolloLink } from "@apollo/client";
+import { createHttpLink } from 'apollo-link-http'
+import { MultiAPILink } from '@habx/apollo-multi-endpoint-link'
 import React from "react";
 import { ThemeSwitcherProvider } from "react-css-theme-switcher";
 import { BrowserRouter } from "react-router-dom";
@@ -11,20 +13,26 @@ const themes = {
   light: `${process.env.PUBLIC_URL}/light-theme.css`,
 };
 
-
-const subgraphUri = "https://api.thegraph.com/subgraphs/name/ipatka/plantoid-mainnet"
-// const subgraphUri = "http://localhost:8000/subgraphs/name/scaffold-eth/your-contract";
-
 const client = new ApolloClient({
-  uri: subgraphUri,
-  cache: new InMemoryCache(),
-});
+    link: ApolloLink.from([
+        new MultiAPILink({
+            endpoints: {
+                metadata: `https://api.thegraph.com/subgraphs/name/ipatka/plantoid-polygon`,
+                mainnet: `https://api.thegraph.com/subgraphs/name/ipatka/plantoid-mainnet`,
+            },
+            // defaultEndpoint: 'https://api.thegraph.com/subgraphs/name/ipatka/daostar',
+            httpSuffix: '',
+            createHttpLink: createHttpLink,
+        }),
+    ]),
+    cache: new InMemoryCache({}),
+})
 
 ReactDOM.render(
   <ApolloProvider client={client}>
     <ThemeSwitcherProvider themeMap={themes} defaultTheme={"dark"}>
       <BrowserRouter>
-        <App subgraphUri={subgraphUri} />
+        <App />
       </BrowserRouter>
     </ThemeSwitcherProvider>
   </ApolloProvider>,

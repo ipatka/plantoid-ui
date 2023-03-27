@@ -198,7 +198,7 @@ function App(props) {
   // const plantoidAddress = "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d".toLowerCase();
   const plantoidAddress = "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1".toLowerCase();
 
-  const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String)
+  const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String) @api(contextKey: "apiName")
   {
     seeds {
       id
@@ -257,6 +257,7 @@ function App(props) {
   const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
   const { loading, error, data } = useQuery(EXAMPLE_GQL, {
     pollInterval: 2500,
+    context: { apiName: "mainnet" },
     variables: {
       address: address ? address.toLowerCase() : ZERO_ADDRESS,
       roundId: round ? plantoidAddress + "_0x" + round : 0,
@@ -283,10 +284,10 @@ function App(props) {
   // keep track of a variable from the contract in the local React state:
 
   const artist = useContractReader(readContracts, "plantoid", "artist");
-  const owner  = useContractReader(readContracts, "plantoid", "owner"); 
+  const owner = useContractReader(readContracts, "plantoid", "owner");
 
   console.log({ artist });
-  console.log({owner})
+  console.log({ owner });
 
   const plantoidAddressRead = readContracts?.plantoid?.address;
 
@@ -380,8 +381,6 @@ function App(props) {
     <div className="App">
       {/* ✏️ Edit the header and change the title to your project name */}
       <Header title="🥀 Plantoid" link="http://plantoid.org" subTitle="a blockchain-based life-form">
-
-
         {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
         <div style={{ position: "relative", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", flex: 1 }}>
@@ -408,8 +407,6 @@ function App(props) {
             />
           </div>
         </div>
-
-        
       </Header>
 
       {yourLocalBalance.lte(ethers.BigNumber.from("0")) && (
@@ -426,8 +423,11 @@ function App(props) {
 
       <div>
         <hr class="style-eight"></hr>
-        <span class="balivia">Welcome </span><br/>
-        <span class="balivia">{address} </span><br/><br/>
+        <span class="balivia">Welcome </span>
+        <br />
+        <span class="balivia">{address} </span>
+        <br />
+        <br />
         You are the lucky owner of <span class="balivia"> {data?.holder?.seeds.length || 0} </span> Plantoid seeds.
         <br></br>
         Total seeds in circulation: <span class="balivia">{data?.seeds.length || "???"}</span>
@@ -445,11 +445,10 @@ function App(props) {
           <Link to="/about">About</Link>
         </Menu.Item>
 
-
         {/* only display these menu items, if the connected users is the plantoid  */}
 
-          {/* {plantoidAddress} */}
-          {/* { (address == plantoidAddress) && (<span> FUCK </span>) }   */}
+        {/* {plantoidAddress} */}
+        {/* { (address == plantoidAddress) && (<span> FUCK </span>) }   */}
 
         <Menu.Item key="/subgraph">
           <Link to="/subgraph">Subgraph</Link>
@@ -469,43 +468,56 @@ function App(props) {
               <Divider />
               <div style={{ margin: 8 }}></div>
 
-            <table>
-            <td  >
-              <Image style={{border: "1px solid ", marginLeft: "-50px" }}
-                width={350}
-                height={520}
-                src="https://gateway.pinata.cloud/ipfs/QmcNY71soxdqjNhhwQkfLFDGRx4kaVva7ERFiNWa1ZFk5m"
-              />
-             </td>
-              <td valign='top'>
-              
-              <table align="right">
-                <td  align="right">Smart Contract:</td>
-                <td><Address
-                    address={plantoidAddress}
-                    ensProvider={mainnetProvider}
-                    blockExplorer={blockExplorer}
-                    fontSize={24}
-                  /></td>
-                <tr/>
+              <table>
+                <td>
+                  <Image
+                    style={{ border: "1px solid ", marginLeft: "-50px" }}
+                    width={350}
+                    height={520}
+                    src="https://gateway.pinata.cloud/ipfs/QmcNY71soxdqjNhhwQkfLFDGRx4kaVva7ERFiNWa1ZFk5m"
+                  />
+                </td>
+                <td valign="top">
+                  <table align="right">
+                    <td align="right">Smart Contract:</td>
+                    <td>
+                      <Address
+                        address={plantoidAddress}
+                        ensProvider={mainnetProvider}
+                        blockExplorer={blockExplorer}
+                        fontSize={24}
+                      />
+                    </td>
+                    <tr />
 
-                <td align="right">Artist:  </td>
-                <td><Address address={artist} ensProvider={mainnetProvider} blockExplorer={blockExplorer} fontSize={24} /></td>
-                <tr/>
+                    <td align="right">Artist: </td>
+                    <td>
+                      <Address
+                        address={artist}
+                        ensProvider={mainnetProvider}
+                        blockExplorer={blockExplorer}
+                        fontSize={24}
+                      />
+                    </td>
+                    <tr />
 
-                <td><Divider /></td><tr/>
+                    <td>
+                      <Divider />
+                    </td>
+                    <tr />
 
-              <td align="right">Current balance:</td>
-              <td> {ethers.utils.formatEther(plantoidBalance.toString())}</td><tr/>
-              <td>Required threshold:</td>
-              <td>{threshold ? ethers.utils.formatEther(threshold.toString()) : "???"}</td><tr/>
-              <td>Currently in escrow:</td>
-              <td>{escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}</td>
-             
+                    <td align="right">Current balance:</td>
+                    <td> {ethers.utils.formatEther(plantoidBalance.toString())}</td>
+                    <tr />
+                    <td>Required threshold:</td>
+                    <td>{threshold ? ethers.utils.formatEther(threshold.toString()) : "???"}</td>
+                    <tr />
+                    <td>Currently in escrow:</td>
+                    <td>{escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}</td>
+                  </table>
+                </td>
               </table>
-              </td> 
-             </table> 
-              
+
               <Divider />
               <h2>Feed me !</h2>
               <EtherInput
@@ -571,8 +583,8 @@ function App(props) {
         </Route>
         <Route exact path="/reveal">
           {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
-          <Reveal
-          address={address}
+          {/* <Reveal
+            address={address}
             plantoidAddress={plantoidAddress}
             userSigner={userSigner}
             user={address}
@@ -580,21 +592,13 @@ function App(props) {
             round={round}
             roundState={roundState}
             mainnetProvider={mainnetProvider}
-          ></Reveal>
+          ></Reveal> */}
         </Route>
 
         <Route exact path="/about">
           <About></About>
         </Route>
 
-        <Route path="/subgraph">
-          <Subgraph
-            subgraphUri={props.subgraphUri}
-            tx={tx}
-            writeContracts={writeContracts}
-            mainnetProvider={mainnetProvider}
-          />
-        </Route>
         <Route exact path="/contracts">
           {/*
                 🎛 this scaffolding is full of commonly used components
