@@ -72,7 +72,7 @@ const { ethers, BigNumber } = require("ethers");
 
 /// 📡 What chain are your contracts deployed to?
 // const initialNetwork = NETWORKS.localhost; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
-const initialNetwork = NETWORKS.mainnet; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
+const initialNetwork = NETWORKS.goerli; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
 const DEBUG = true;
@@ -196,8 +196,11 @@ function App(props) {
 
   // const plantoidAddress = "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E".toLowerCase();
   // const plantoidAddress = "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d".toLowerCase();
-  const plantoidAddress = "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1".toLowerCase();
-
+  //const plantoidAddress = "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1".toLowerCase();
+  const plantoidAddress = "0xFfe18b42DE363a9b06b6a6a91733f50F998c3F13".toLowerCase();
+  
+  
+  
   const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String) @api(contextKey: "apiName")
   {
     seeds {
@@ -464,7 +467,7 @@ function App(props) {
           {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
           <div>
             <div style={{ border: "1px solid #cccccc", padding: 16, width: 800, margin: "auto", marginTop: 64 }}>
-              <h2>Plantoid #13</h2>
+              <h2>Plantoid #14</h2>
               <Divider />
               <div style={{ margin: 8 }}></div>
 
@@ -474,7 +477,9 @@ function App(props) {
                     style={{ border: "1px solid ", marginLeft: "-50px" }}
                     width={350}
                     height={520}
-                    src="https://gateway.pinata.cloud/ipfs/QmcNY71soxdqjNhhwQkfLFDGRx4kaVva7ERFiNWa1ZFk5m"
+                     src="https://ipfs.io/ipfs/QmRxsxzUEEHsp7QhoHwgDZZ79NTdZ5TH91r74z4cnSEcW6"
+                     // src="https://imagesvibe.com/wp-content/uploads/2023/03/Cute-Panda-Images1.jpg"
+                   // src="https://ipfs.io/ipfs/QmQXzNG8X9jMYmcriSP4UEnighM9VLP9Ppt1EyEidBw3pk"
                   />
                 </td>
                 <td valign="top">

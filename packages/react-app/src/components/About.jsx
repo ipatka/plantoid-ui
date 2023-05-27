@@ -12,7 +12,7 @@ export default function About() {
           <Image style={{border: "1px solid ", marginLeft: "-50px" }}
             width={350}
             height={520}
-            src="https://gateway.pinata.cloud/ipfs/QmcNY71soxdqjNhhwQkfLFDGRx4kaVva7ERFiNWa1ZFk5m"
+            src="https://ipfs.io/ipfs/QmRxsxzUEEHsp7QhoHwgDZZ79NTdZ5TH91r74z4cnSEcW6"
           />
          </td>
 
@@ -35,16 +35,15 @@ export default function About() {
         </table>
 
         <br/><span class="plantoid-text-cursive">
-        Plantoid #13 was born out of the contribution of many friends and colleagues, which I am deeply appreciative of.<br/>
+        Plantoid #14 was born out of the contribution of many friends and colleagues, which I am deeply appreciative of.<br/>
         These include, in particular:<br/><br/>
         <ul>
             <li>Yannick LeDaniel — body art and design</li>
-            <li>Martin Vert — electronics and music wiz</li>
-            <li>Isaac Patka — smart contract architecture</li></ul>
-            <Divider></Divider><ul>
-            <li>Leo Blondel & Patrick Deegan — electronics support</li>
-            <li>Louis Parker & Dimi DeJonghe — frontend support</li>
-            </ul><Divider></Divider><ul>
+            <li>Martin Vert — electronics wiz</li>
+            <li>Isaac Patka — smart contract architecture</li>
+            <li>Ben Moskowitz - Artificial Intelligence</li>
+            <li>Tony Lai - for donating the voice</li>
+            <Divider></Divider>
             <li>All members of Feytopia and the GLITCH community who made me believe that everything is possible</li>
         </ul>
         </span>
