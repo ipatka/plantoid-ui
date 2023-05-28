@@ -2437,7 +2437,7 @@ module.exports = {
   5: {
     contracts: {
       plantoid: {
-        address: "0xFfe18b42DE363a9b06b6a6a91733f50F998c3F13",
+        address: "0x9809D9C367fA49297c4b1F8E57A13a310b00cDc1",
         abi: PlantoidABI,
       },
     },
