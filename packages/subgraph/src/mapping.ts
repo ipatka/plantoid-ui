@@ -66,6 +66,7 @@ export function handleSeedTransfer(event: Transfer): void {
     let from = event.params.from.toHex()
     let to = event.params.to.toHex()
     let id = event.address.toHexString() + '_' + event.params.tokenId.toHexString()
+    let plantoidAddress = event.address.toHexString()
 
     if (from != ZERO_ADDRESS_STRING) {
         let sender = Holder.load(from)
@@ -91,6 +92,7 @@ export function handleSeedTransfer(event: Transfer): void {
             seed.holder = to
             seed.revealed = false
             seed.uri = ''
+            seed.plantoid = plantoidAddress
             // let metadataURI = contract.try_tokenURI(id)
             // if (!metadataURI.reverted) {
             //     seed.uri = normalize(metadataURI.value)

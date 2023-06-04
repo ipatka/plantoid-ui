@@ -8,6 +8,14 @@ type Seed @entity {
     transactionHash: String!
     revealedSignature: Bytes
     revealedUri: String
+    plantoid: PlantoidInstance!
+}
+
+type PlantoidInstance @entity {
+    id: ID!
+    address: Bytes!
+    oracle: Bytes
+    seeds: [Seed!] @derivedFrom(field: "plantoid")
 }
 
 type SeedMetadata @entity {
@@ -63,10 +71,4 @@ type Round @entity {
     graceEnd: BigInt
     winningProposal: Proposal
     totalVotes: BigInt!
-}
-
-type PlantoidInstance @entity {
-    id: ID!
-    address: Bytes!
-    oracle: Bytes
 }

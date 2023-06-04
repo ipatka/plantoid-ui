@@ -203,18 +203,6 @@ function App(props) {
   
   const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String) @api(contextKey: "apiName")
   {
-    seeds {
-      id
-      holder {
-        address
-        seedCount
-      }
-      tokenId
-      uri
-      revealed
-      revealedUri
-      revealedSignature
-    }
     holders {
       address
       seedCount
@@ -254,6 +242,18 @@ function App(props) {
     plantoidInstance(id: $plantoidAddress) {
       id
       oracle
+      seeds {
+        id
+        holder {
+          address
+          seedCount
+        }
+        tokenId
+        uri
+        revealed
+        revealedUri
+        revealedSignature
+      }
     }
   }
   `;
@@ -268,7 +268,7 @@ function App(props) {
     },
   });
 
-  console.log({ error, data });
+  console.log({ name: "INSTANCE", error, data });
   // EXTERNAL CONTRACT EXAMPLE:
   //
   // If you want to bring in the mainnet DAI contract it would look like:
@@ -296,7 +296,7 @@ function App(props) {
 
   console.log({ round, roundState, plantoidAddressRead });
 
-  console.log("NUMBER OF IDss---------- " + data?.seeds.length);
+  console.log("NUMBER OF IDss---------- " + data?.plantoidInstance?.seeds.length);
 
   const threshold = useContractReader(readContracts, "plantoid", "threshold");
   const escrow = useContractReader(readContracts, "plantoid", "escrow");
@@ -433,7 +433,7 @@ function App(props) {
         <br />
         You are the lucky owner of <span class="balivia"> {data?.holder?.seeds.length || 0} </span> Plantoid seeds.
         <br></br>
-        Total seeds in circulation: <span class="balivia">{data?.seeds.length || "???"}</span>
+        Total seeds in circulation: <span class="balivia">{data?.plantoidInstance?.seeds.length || "???"}</span>
         <hr class="style-eight"></hr>
       </div>
 

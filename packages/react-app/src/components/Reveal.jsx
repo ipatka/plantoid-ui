@@ -92,7 +92,7 @@ export default function Reveal({
     console.log("GRAPH DATA!!!!!!!! ", graphData);
     const combinedData = graphData?.holder?.seeds.map(g => {
       if (!data) return { ...g };
-      const revealData  = data.plantoidMetadata.seedMetadatas.find(s => s.id === g.id);
+      const revealData  = data?.plantoidMetadata?.seedMetadatas.find(s => s.id === g.id);
       console.log("........................................\n");
       console.log({ revealData });
       if (revealData)
@@ -104,7 +104,7 @@ export default function Reveal({
     });
   
     const remainData = [];
-    graphData?.seeds.map(s => {
+    graphData?.seeds?.map(s => {
       if (s?.holder?.address.toLowerCase() == address.toLowerCase()) {
         console.log('remove ',s);
         // do nothing
