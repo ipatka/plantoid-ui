@@ -198,9 +198,7 @@ function App(props) {
   // const plantoidAddress = "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d".toLowerCase();
   //const plantoidAddress = "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1".toLowerCase();
   const plantoidAddress = "0x9809D9C367fA49297c4b1F8E57A13a310b00cDc1".toLowerCase();
-  
-  
-  
+
   const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String) @api(contextKey: "apiName")
   {
     holders {
@@ -227,6 +225,9 @@ function App(props) {
     holder(id: $address) {
       seeds {
         id
+        plantoid {
+          id
+        }
       holder {
         address
         seedCount
@@ -380,6 +381,36 @@ function App(props) {
 
   const events = useEventListener(readContracts, "plantoid", "Deposit", localProvider, 10983913);
 
+  const mdQuery = `{
+      plantoidMetadata(id: "${plantoidAddress}") {
+        id
+        seedMetadatas {
+          id
+          revealedUri
+          revealedSignature
+        }
+      }
+  }`;
+  const plantoidQuery = `{
+    plantoidInstance(id: "${plantoidAddress}") {
+      id
+      oracle
+      seeds {
+        id
+        holder {
+          address
+          seedCount
+        }
+        tokenId
+        uri
+        revealed
+        revealedUri
+        revealedSignature
+      }
+    }
+  
+  }`;
+
   return (
     <div className="App">
       {/* ✏️ Edit the header and change the title to your project name */}
@@ -431,7 +462,12 @@ function App(props) {
         <span class="balivia">{address} </span>
         <br />
         <br />
-        You are the lucky owner of <span class="balivia"> {data?.holder?.seeds.length || 0} </span> Plantoid seeds.
+        You are the lucky owner of{" "}
+        <span class="balivia">
+          {" "}
+          {data?.holder?.seeds.filter(s => s.plantoid.id === plantoidAddress).length || 0}{" "}
+        </span>{" "}
+        Plantoid seeds.
         <br></br>
         Total seeds in circulation: <span class="balivia">{data?.plantoidInstance?.seeds.length || "???"}</span>
         <hr class="style-eight"></hr>
@@ -477,9 +513,9 @@ function App(props) {
                     style={{ border: "1px solid ", marginLeft: "-50px" }}
                     width={350}
                     height={520}
-                     src="https://ipfs.io/ipfs/QmRxsxzUEEHsp7QhoHwgDZZ79NTdZ5TH91r74z4cnSEcW6"
-                     // src="https://imagesvibe.com/wp-content/uploads/2023/03/Cute-Panda-Images1.jpg"
-                   // src="https://ipfs.io/ipfs/QmQXzNG8X9jMYmcriSP4UEnighM9VLP9Ppt1EyEidBw3pk"
+                    src="https://ipfs.io/ipfs/QmRxsxzUEEHsp7QhoHwgDZZ79NTdZ5TH91r74z4cnSEcW6"
+                    // src="https://imagesvibe.com/wp-content/uploads/2023/03/Cute-Panda-Images1.jpg"
+                    // src="https://ipfs.io/ipfs/QmQXzNG8X9jMYmcriSP4UEnighM9VLP9Ppt1EyEidBw3pk"
                   />
                 </td>
                 <td valign="top">
@@ -602,6 +638,26 @@ function App(props) {
 
         <Route exact path="/about">
           <About></About>
+        </Route>
+
+        <Route exact path="/subgraph">
+          {/*
+                🎛 this scaffolding is full of commonly used components
+                this <Contract/> component will automatically parse your ABI
+                and give you a form to interact with it locally
+            */}
+          Plantoid
+          <Subgraph
+            mainnetProvider={mainnetProvider}
+            subgraphUri="https://api.thegraph.com/subgraphs/name/yaoe/plantoid-14-goerli"
+            query={plantoidQuery}
+          />
+          Metadata
+          <Subgraph
+            mainnetProvider={mainnetProvider}
+            subgraphUri="https://api.thegraph.com/subgraphs/name/ipatka/plantoid-polygon"
+            query={mdQuery}
+          />
         </Route>
 
         <Route exact path="/contracts">

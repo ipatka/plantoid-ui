@@ -90,7 +90,7 @@ export default function Reveal({
   console.log({ graphData });
   if (address) {
     console.log("GRAPH DATA!!!!!!!! ", graphData);
-    const combinedData = graphData?.holder?.seeds.map(g => {
+    const combinedData = graphData?.holder?.seeds.filter(s => s.plantoid.id === plantoidAddress).map(g => {
       if (!data) return { ...g };
       const revealData  = data?.plantoidMetadata?.seedMetadatas.find(s => s.id === g.id);
       console.log("........................................\n");
@@ -104,7 +104,7 @@ export default function Reveal({
     });
   
     const remainData = [];
-    graphData?.seeds?.map(s => {
+    graphData?.plantoidInstance?.seeds?.map(s => {
       if (s?.holder?.address.toLowerCase() == address.toLowerCase()) {
         console.log('remove ',s);
         // do nothing

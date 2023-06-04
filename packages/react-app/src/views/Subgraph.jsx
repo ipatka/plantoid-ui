@@ -24,56 +24,16 @@ function Subgraph(props) {
     }).then(response => response.json());
   }
 
-  const EXAMPLE_GRAPHQL = `
-  {
-    seeds {
-      id
-      holder {
-        address
-        seedCount
-      }
-      tokenId
-      revealed
-    }
-  }
-  `;
-  const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
-  const { loading, data } = useQuery(EXAMPLE_GQL, { pollInterval: 2500 });
 
-  console.log(data);
-
-  const seedColumns = [
-    {
-      title: "Holder",
-      key: "id",
-      render: record => <Address value={record.holder.address} ensProvider={props.mainnetProvider} fontSize={16} />,
-    },
-    {
-      title: "Seed",
-      key: "token",
-      render: record => record.tokenId,
-    },
-  ];
-
-  const deployWarning = (
-    <div style={{ marginTop: 8, padding: 8 }}>Warning: 🤔 Have you deployed your subgraph yet?</div>
-  );
 
   return (
     <>
       <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
-        {data ? (
-          <Table dataSource={data.seeds} columns={seedColumns} rowKey="id" />
-        ) : (
-          <Typography>{loading ? "Loading..." : deployWarning}</Typography>
-        )}
-
         <div style={{ margin: 32, height: 400, border: "1px solid #888888", textAlign: "left" }}>
-          <GraphiQL fetcher={graphQLFetcher} docExplorerOpen query={EXAMPLE_GRAPHQL} />
+          <GraphiQL fetcher={graphQLFetcher} docExplorerOpen query={props.query} />
         </div>
       </div>
 
-      <div style={{ padding: 64 }}>...</div>
     </>
   );
 }
