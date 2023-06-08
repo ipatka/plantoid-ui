@@ -72,7 +72,7 @@ const { ethers, BigNumber } = require("ethers");
 
 /// 📡 What chain are your contracts deployed to?
 // const initialNetwork = NETWORKS.localhost; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
-const initialNetwork = NETWORKS.goerli; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
+const initialNetwork = NETWORKS.mainnet; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
 const DEBUG = true;
@@ -197,7 +197,7 @@ function App(props) {
   // const plantoidAddress = "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E".toLowerCase();
   // const plantoidAddress = "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d".toLowerCase();
   //const plantoidAddress = "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1".toLowerCase();
-  const plantoidAddress = "0x9809D9C367fA49297c4b1F8E57A13a310b00cDc1".toLowerCase();
+  const plantoidAddress = "0xFfe18b42DE363a9b06b6a6a91733f50F998c3F13".toLowerCase();
 
   const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String) @api(contextKey: "apiName")
   {
@@ -649,7 +649,7 @@ function App(props) {
           Plantoid
           <Subgraph
             mainnetProvider={mainnetProvider}
-            subgraphUri="https://api.thegraph.com/subgraphs/name/yaoe/plantoid-14-goerli"
+            subgraphUri="https://api.thegraph.com/subgraphs/name/ipatka/plantoid-mainnet-v2"
             query={plantoidQuery}
           />
           Metadata

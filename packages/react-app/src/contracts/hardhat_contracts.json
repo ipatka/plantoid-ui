@@ -987,7 +987,7 @@
           ]
         },
         "Plantoid": {
-          "address": "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1",
+          "address": "0x580fDc17a820e3c0D17fbcd1137483C5332FCeb6",
           "abi": [
             {
               "inputs": [],
@@ -5123,7 +5123,7 @@
       "chainId": "5",
       "contracts": {
         "Plantoid": {
-          "address": "0x9809D9C367fA49297c4b1F8E57A13a310b00cDc1",
+          "address": "0x580fDc17a820e3c0D17fbcd1137483C5332FCeb6",
           "abi": [
             {
               "inputs": [],
@@ -5153,6 +5153,11 @@
             {
               "inputs": [],
               "name": "CannotAdvance",
+              "type": "error"
+            },
+            {
+              "inputs": [],
+              "name": "CannotSpawn",
               "type": "error"
             },
             {
@@ -5208,6 +5213,11 @@
             {
               "inputs": [],
               "name": "NotWinner",
+              "type": "error"
+            },
+            {
+              "inputs": [],
+              "name": "NothingToWithdraw",
               "type": "error"
             },
             {
@@ -6377,13 +6387,19 @@
               "type": "function"
             },
             {
-              "inputs": [],
-              "name": "salt",
-              "outputs": [
+              "inputs": [
                 {
                   "internalType": "uint256",
                   "name": "",
                   "type": "uint256"
+                }
+              ],
+              "name": "salts",
+              "outputs": [
+                {
+                  "internalType": "bytes32",
+                  "name": "",
+                  "type": "bytes32"
                 }
               ],
               "stateMutability": "view",
@@ -6866,6 +6882,38 @@
               "type": "function"
             },
             {
+              "inputs": [
+                {
+                  "internalType": "address payable",
+                  "name": "recipient",
+                  "type": "address"
+                }
+              ],
+              "name": "withdrawFor",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "name": "withdrawableBalances",
+              "outputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "",
+                  "type": "uint256"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
               "stateMutability": "payable",
               "type": "receive"
             }
@@ -6988,7 +7036,7 @@
           ]
         },
         "PlantoidSpawn": {
-          "address": "0xD6A57C7665D3860e00e9Fded4D0666cAF2263262",
+          "address": "0xef0Dae31395821633B1E0DfEab4B0f6AF358cDB1",
           "abi": [
             {
               "inputs": [

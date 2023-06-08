@@ -18,7 +18,7 @@ const client = new ApolloClient({
         new MultiAPILink({
             endpoints: {
                 metadata: `https://api.thegraph.com/subgraphs/name/ipatka/plantoid-polygon`,
-                mainnet: `https://api.thegraph.com/subgraphs/name/yaoe/plantoid-14-goerli`,
+                mainnet: `https://api.thegraph.com/subgraphs/name/ipatka/plantoid-mainnet-v2`,
             },
             // defaultEndpoint: 'https://api.thegraph.com/subgraphs/name/ipatka/daostar',
             httpSuffix: '',
