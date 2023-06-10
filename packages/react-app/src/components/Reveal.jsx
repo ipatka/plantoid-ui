@@ -104,13 +104,15 @@ export default function Reveal({
     });
   
     const remainData = [];
-    graphData?.plantoidInstance?.seeds?.map(s => {
-      if (s?.holder?.address.toLowerCase() == address.toLowerCase()) {
-        console.log('remove ',s);
+    graphData?.plantoidInstance?.seeds?.forEach(g => {
+      if (g?.holder?.address.toLowerCase() == address.toLowerCase()) {
+        console.log('remove ',g);
         // do nothing
       } else {
-        console.log('do not remove ',s)
-        remainData.push(s);
+        const revealData  = data?.plantoidMetadata?.seedMetadatas.find(s => s.id === g.id);
+      console.log({ revealData });
+        console.log('do not remove ',g)
+        remainData.push({...g, ...revealData});
       }
     })
 
