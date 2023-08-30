@@ -1,13 +1,12 @@
 import { Divider, Image } from "antd";
 
 export default function About() {
-    return (
-        
-        <div style={{ border: "1px solid #cccccc", padding: 16, width: 800, margin: "auto", marginTop: 64 }}>
-          <h2>Plantoid #15</h2>
-          <Divider />
-       
-        <table valign="top">
+  return (
+    <div style={{ border: "1px solid #cccccc", padding: 16, width: 800, margin: "auto", marginTop: 64 }}>
+      <h2>Plantoid #15</h2>
+      <Divider />
+
+      <table valign="top">
         <td>
           <Image
             style={{ border: "1px solid ", marginLeft: "-50px" }}
