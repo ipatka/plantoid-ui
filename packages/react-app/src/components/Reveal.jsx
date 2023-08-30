@@ -9,8 +9,12 @@ import PlantoidMetdataABI from "../contracts/plantoidMetadata";
 import { Address } from "../components";
 
 import _ from "lodash";
+import { ipfs } from "../helpers";
 
 const { ethers } = require("ethers");
+
+const ipfsBase = "https://gateway.ipfs.io/ipfs/";
+// 3. Create out useEffect function
 
 export default function Reveal({
   address,
@@ -21,8 +25,8 @@ export default function Reveal({
   round,
   roundState,
   mainnetProvider,
+  ipfsContent,
 }) {
-
   // merge graph data from front page to graph data here
   const MD_QUERY = gql`
     query MdQuery($id: String) @api(contextKey: "apiName") {
@@ -81,18 +85,35 @@ export default function Reveal({
       ),
     },
     {
-      title: "Metadata URI",
+      title: "View NFT",
       key: "uri",
-      render: record => record.uri,
+      render: record => (
+        <div>
+          <Button
+            disabled={!record.uri}
+            onClick={() => {
+              window.open(record.uri, '_blank');
+            }}
+          >
+            View
+          </Button>
+        </div>
+      ),
     },
   ];
 
   console.log({ graphData });
   if (address) {
     console.log("GRAPH DATA!!!!!!!! ", graphData);
-    const combinedData = graphData?.holder?.seeds.filter(s => s.plantoid.id === plantoidAddress).map(g => {
+    const combinedData = graphData?.plantoidInstance?.seeds.map(g => {
+      if (g.revealed && ipfsContent[g.id]) {
+        const revealedData = { ...g, ...ipfsContent[g.id] };
+        if (revealedData["animation_url"])
+          revealedData["uri"] = ipfsBase + revealedData["animation_url"].split("ipfs://")[1];
+        return revealedData;
+      }
       if (!data) return { ...g };
-      const revealData  = data?.plantoidMetadata?.seedMetadatas.find(s => s.id === g.id);
+      const revealData = data?.plantoidMetadata?.seedMetadatas.find(s => s.id === g.id);
       console.log("........................................\n");
       console.log({ revealData });
       if (revealData)
@@ -100,47 +121,42 @@ export default function Reveal({
           ...g,
           ...revealData,
         };
-      else return { ...g, };
+      else return { ...g };
     });
-  
-    const remainData = [];
-    graphData?.plantoidInstance?.seeds?.map(s => {
-      if (s?.holder?.address.toLowerCase() == address.toLowerCase()) {
-        console.log('remove ',s);
-        // do nothing
-      } else {
-        console.log('do not remove ',s)
-        remainData.push(s);
-      }
-    })
+
+    const holderData = combinedData ? combinedData.filter(g => g.holder.address.toLowerCase() === address.toLowerCase()) : []
+    const remainData = combinedData ? combinedData.filter(g => g.holder.address.toLowerCase() !== address.toLowerCase()) : []
+
 
     // console.log( graphData.seeds)
     console.log({ combinedData });
-    console.log({remainData});
-    
+    console.log({ remainData });
+
     return (
       <div>
         <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
           {/* {graphData && graphData.holder ? ( */}
-            <br/>Reveal your own NFTs<br/>
-            <Table
-              dataSource={_.sortBy(combinedData, function (o) {
-                return - Number(o.tokenId);
-              })}
-              columns={revealColumns}
-              rowKey="id"
-            />
+          <br />
+          Reveal your own NFTs
+          <br />
+          <Table
+            dataSource={_.sortBy(holderData, function (o) {
+              return -Number(o.tokenId);
+            })}
+            columns={revealColumns}
+            rowKey="id"
+          />
           {/* ) : ( */}
-            <br/>Reveal other people's NFTs<br/>
-            <Table
-              dataSource={_.sortBy(remainData, function (o) {
-                return - Number(o.tokenId);
-              })}
-              columns={revealColumns}
-              rowKey="id"
-            />
-
-            
+          <br />
+          Reveal other people's NFTs
+          <br />
+          <Table
+            dataSource={_.sortBy(remainData, function (o) {
+              return -Number(o.tokenId);
+            })}
+            columns={revealColumns}
+            rowKey="id"
+          />
           {/* )} */}
         </div>
       </div>
