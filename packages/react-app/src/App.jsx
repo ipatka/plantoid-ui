@@ -197,7 +197,7 @@ function App(props) {
   // const plantoidAddress = "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E".toLowerCase();
   // const plantoidAddress = "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d".toLowerCase();
   //const plantoidAddress = "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1".toLowerCase();
-  const plantoidAddress = "0x9809D9C367fA49297c4b1F8E57A13a310b00cDc1".toLowerCase();
+  const plantoidAddress = "0x0B60EE161d7b67fa231e9565dAFF65b34553bC6F".toLowerCase();
 
   const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String) @api(contextKey: "apiName")
   {
@@ -503,7 +503,7 @@ function App(props) {
           {/* pass in any web3 props to this Home component. For example, yourLocalBalance */}
           <div>
             <div style={{ border: "1px solid #cccccc", padding: 16, width: 800, margin: "auto", marginTop: 64 }}>
-              <h2>Plantoid #14</h2>
+              <h2>Plantoid #15</h2>
               <Divider />
               <div style={{ margin: 8 }}></div>
 
@@ -513,7 +513,7 @@ function App(props) {
                     style={{ border: "1px solid ", marginLeft: "-50px" }}
                     width={350}
                     height={520}
-                    src="https://ipfs.io/ipfs/QmRxsxzUEEHsp7QhoHwgDZZ79NTdZ5TH91r74z4cnSEcW6"
+                    src="https://ipfs.io/ipfs/QmRcrcn4X6QfSwFnJQ1dNHn8YgW7pbmm6BjZn7t8FW7WFV"
                     // src="https://imagesvibe.com/wp-content/uploads/2023/03/Cute-Panda-Images1.jpg"
                     // src="https://ipfs.io/ipfs/QmQXzNG8X9jMYmcriSP4UEnighM9VLP9Ppt1EyEidBw3pk"
                   />
