@@ -1,6 +1,6 @@
 import { ApolloClient, ApolloProvider, InMemoryCache, ApolloLink } from "@apollo/client";
-import { createHttpLink } from 'apollo-link-http'
-import { MultiAPILink } from '@habx/apollo-multi-endpoint-link'
+import { createHttpLink } from "apollo-link-http";
+import { MultiAPILink } from "@habx/apollo-multi-endpoint-link";
 import React from "react";
 import { ThemeSwitcherProvider } from "react-css-theme-switcher";
 import { BrowserRouter } from "react-router-dom";
@@ -14,19 +14,19 @@ const themes = {
 };
 
 const client = new ApolloClient({
-    link: ApolloLink.from([
-        new MultiAPILink({
-            endpoints: {
-                metadata: `https://api.thegraph.com/subgraphs/name/ipatka/plantoid-polygon`,
-                mainnet: `https://api.thegraph.com/subgraphs/name/yaoe/plantoid-14-goerli`,
-            },
-            // defaultEndpoint: 'https://api.thegraph.com/subgraphs/name/ipatka/daostar',
-            httpSuffix: '',
-            createHttpLink: createHttpLink,
-        }),
-    ]),
-    cache: new InMemoryCache({}),
-})
+  link: ApolloLink.from([
+    new MultiAPILink({
+      endpoints: {
+        metadata: `https://api.thegraph.com/subgraphs/name/ipatka/plantoid-polygon`,
+        mainnet: `https://api.thegraph.com/subgraphs/name/yaoe/plantoid-14-goerli`,
+      },
+      // defaultEndpoint: 'https://api.thegraph.com/subgraphs/name/ipatka/daostar',
+      httpSuffix: "",
+      createHttpLink: createHttpLink,
+    }),
+  ]),
+  cache: new InMemoryCache({}),
+});
 
 ReactDOM.render(
   <ApolloProvider client={client}>

@@ -28,7 +28,7 @@ const useTokenList = (tokenListUri, chainId) => {
         let _tokenList;
 
         if (chainId) {
-          _tokenList = tokenListJson.tokens.filter(function (t) {
+          _tokenList = tokenListJson.tokens.filter(function(t) {
             return t.chainId === chainId;
           });
         } else {

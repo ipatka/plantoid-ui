@@ -1,15 +1,12 @@
 import React from "react";
 import { gql, useQuery } from "@apollo/client";
-import { useState } from "react";
 
-import { Table, Input, Button, Divider } from "antd";
+import { Table, Button } from "antd";
 
 import PlantoidABI from "../contracts/plantoid";
-import PlantoidMetdataABI from "../contracts/plantoidMetadata";
 import { Address } from "../components";
 
 import _ from "lodash";
-import { ipfs } from "../helpers";
 
 const { ethers } = require("ethers");
 
@@ -90,9 +87,9 @@ export default function Reveal({
       render: record => (
         <div>
           <Button
-            disabled={!record.uri}
+            disabled={!record.revealed_uri}
             onClick={() => {
-              window.open(record.uri, '_blank');
+              window.open(record.revealed_uri, "_blank");
             }}
           >
             View
@@ -109,7 +106,7 @@ export default function Reveal({
       if (g.revealed && ipfsContent[g.id]) {
         const revealedData = { ...g, ...ipfsContent[g.id] };
         if (revealedData["animation_url"])
-          revealedData["uri"] = ipfsBase + revealedData["animation_url"].split("ipfs://")[1];
+          revealedData["revealed_uri"] = ipfsBase + revealedData["animation_url"].split("ipfs://")[1];
         return revealedData;
       }
       if (!data) return { ...g };
@@ -124,9 +121,12 @@ export default function Reveal({
       else return { ...g };
     });
 
-    const holderData = combinedData ? combinedData.filter(g => g.holder.address.toLowerCase() === address.toLowerCase()) : []
-    const remainData = combinedData ? combinedData.filter(g => g.holder.address.toLowerCase() !== address.toLowerCase()) : []
-
+    const holderData = combinedData
+      ? combinedData.filter(g => g.holder.address.toLowerCase() === address.toLowerCase())
+      : [];
+    const remainData = combinedData
+      ? combinedData.filter(g => g.holder.address.toLowerCase() !== address.toLowerCase())
+      : [];
 
     // console.log( graphData.seeds)
     console.log({ combinedData });

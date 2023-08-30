@@ -1,19 +1,8 @@
-import { gql, useQuery } from "@apollo/client";
-import { Button, Input, Table, Typography } from "antd";
 import "antd/dist/antd.css";
 import GraphiQL from "graphiql";
 import "graphiql/graphiql.min.css";
 import fetch from "isomorphic-fetch";
-import React, { useState } from "react";
-import { Address } from "../components";
-
-const highlight = {
-  marginLeft: 4,
-  marginRight: 8,
-  /* backgroundColor: "#f9f9f9", */ padding: 4,
-  borderRadius: 4,
-  fontWeight: "bolder",
-};
+import React from "react";
 
 function Subgraph(props) {
   function graphQLFetcher(graphQLParams) {
@@ -24,8 +13,6 @@ function Subgraph(props) {
     }).then(response => response.json());
   }
 
-
-
   return (
     <>
       <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
@@ -33,7 +20,6 @@ function Subgraph(props) {
           <GraphiQL fetcher={graphQLFetcher} docExplorerOpen query={props.query} />
         </div>
       </div>
-
     </>
   );
 }

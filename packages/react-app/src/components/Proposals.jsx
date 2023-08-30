@@ -54,7 +54,7 @@ export default function Proposals({ plantoidAddress, userSigner, user, graphData
           {proposalsList?.map(prop => {
             console.log({ prop });
 
-            if (prop[0] == 0) {
+            if (prop[0] === 0) {
               return <div />;
             } else {
               console.log({ prop });
@@ -92,7 +92,7 @@ export default function Proposals({ plantoidAddress, userSigner, user, graphData
       {roundState === 4 && (
         <div>
           <span>{winningProposal.proposer}</span>
-          </div>
+        </div>
       )}
       {roundState === 2 ? (
         <div>
@@ -100,7 +100,7 @@ export default function Proposals({ plantoidAddress, userSigner, user, graphData
           {proposalsList?.map(prop => {
             console.log({ prop });
 
-            if (prop[0] == 0) {
+            if (prop[0] === 0) {
               return <div />;
             } else {
               console.log({ prop });
@@ -167,7 +167,6 @@ const submitVote = async (plantoidAddress, userSigner, prop) => {
     //const votokens = Array.from({length: tokens[user] || 1}, (_, i) => i + 1) ;
     //console.log({votokens, prop});
     await plantoid.submitVote(prop.proposalId);
-
   } catch (error) {
     console.log({ error });
   }
