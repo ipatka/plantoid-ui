@@ -125,7 +125,7 @@ export default function Reveal({
             <br/>Reveal your own NFTs<br/>
             <Table
               dataSource={_.sortBy(combinedData, function (o) {
-                return Number(o.tokenId);
+                return - Number(o.tokenId);
               })}
               columns={revealColumns}
               rowKey="id"
@@ -134,7 +134,7 @@ export default function Reveal({
             <br/>Reveal other people's NFTs<br/>
             <Table
               dataSource={_.sortBy(remainData, function (o) {
-                return Number(o.tokenId);
+                return - Number(o.tokenId);
               })}
               columns={revealColumns}
               rowKey="id"
