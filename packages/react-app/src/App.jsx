@@ -1,19 +1,11 @@
-import { Button, Col, Menu, Row, Input, Divider, List, Image } from "antd";
+import { Button, Col, Menu, Row, Divider, List, Image } from "antd";
 import "antd/dist/antd.css";
 import { gql, useQuery } from "@apollo/client";
-import {
-  useBalance,
-  useContractLoader,
-  useContractReader,
-  useGasPrice,
-  useOnBlock,
-  useUserProviderAndSigner,
-} from "eth-hooks";
+import { useBalance, useContractLoader, useContractReader, useOnBlock, useUserProviderAndSigner } from "eth-hooks";
 import { useEventListener } from "eth-hooks/events/useEventListener";
 import { useExchangeEthPrice } from "eth-hooks/dapps/dex";
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, Route, Switch, useLocation } from "react-router-dom";
-import GraphiQL from "graphiql";
 import "graphiql/graphiql.min.css";
 import fetch from "isomorphic-fetch";
 import "./App.css";
@@ -23,33 +15,25 @@ import {
   Contract,
   Address,
   Faucet,
-  GasGauge,
   Header,
-  Ramp,
   ThemeSwitch,
-  NetworkDisplay,
   FaucetHint,
   NetworkSwitch,
-  AddressInput,
   EtherInput,
-  Events,
-  BytesStringInput,
   Proposals,
 } from "./components";
 import { NETWORKS, ALCHEMY_KEY } from "./constants";
 import externalContracts from "./contracts/external_contracts";
-import PlantoidABI from "./contracts/plantoid";
 // contracts
 import deployedContracts from "./contracts/hardhat_contracts.json";
-import { Transactor, Web3ModalSetup, ipfs } from "./helpers";
-import { Home, ExampleUI, Hints, Subgraph } from "./views";
+import { Web3ModalSetup } from "./helpers";
+import { Subgraph } from "./views";
 import { useStaticJsonRPC } from "./hooks";
 import { ZERO_ADDRESS } from "./components/Swap";
 
-import { safeSignTypedData, encodeMultiSend, MetaTransaction } from "@gnosis.pm/safe-contracts";
 import Reveal from "./components/Reveal";
 
-const { ethers, BigNumber } = require("ethers");
+const { ethers } = require("ethers");
 
 /*
     Welcome to 🏗 scaffold-eth !
@@ -76,11 +60,8 @@ const initialNetwork = NETWORKS.mainnet; // <------- select your target frontend
 
 // 😬 Sorry for all the console logging
 const DEBUG = true;
-const NETWORKCHECK = true;
 const USE_BURNER_WALLET = true; // toggle burner wallet feature
 const USE_NETWORK_SELECTOR = false;
-
-const ZERO_ADDRESS_STRING = "0x0000000000000000000000000000000000000000";
 
 const web3Modal = Web3ModalSetup();
 
@@ -149,7 +130,6 @@ function App(props) {
   const price = useExchangeEthPrice(targetNetwork, mainnetProvider);
 
   /* 🔥 This hook will get the price of Gas from ⛽️ EtherGasStation */
-  const gasPrice = useGasPrice(targetNetwork, "fast");
   // Use your injected provider from 🦊 Metamask or if you don't have it then instantly generate a 🔥 burner wallet.
   const userProviderAndSigner = useUserProviderAndSigner(injectedProvider, localProvider, USE_BURNER_WALLET);
   const userSigner = userProviderAndSigner.signer;
@@ -172,7 +152,6 @@ function App(props) {
   // For more hooks, check out 🔗eth-hooks at: https://www.npmjs.com/package/eth-hooks
 
   // The transactor wraps transactions and provides notificiations
-  const tx = Transactor(userSigner, gasPrice);
 
   // 🏗 scaffold-eth is full of handy hooks like this one to get your balance:
   const yourLocalBalance = useBalance(localProvider, address);
@@ -261,7 +240,7 @@ function App(props) {
   }
   `;
   const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
-  const { loading, error, data } = useQuery(EXAMPLE_GQL, {
+  const { error, data } = useQuery(EXAMPLE_GQL, {
     pollInterval: 2500,
     context: { apiName: "mainnet" },
     variables: {
@@ -273,28 +252,29 @@ function App(props) {
 
   let [ipfsContent, setIpfsContent] = useState({});
 
-  useEffect(async () => {
+  useEffect(() => {
+    const newIpfsContent = { ...ipfsContent };
+    async function fetchData(seed) {
+      const response = await fetch(`${ipfsBase}${seed.uri.split("ipfs://")[1]}`);
+      const data = await response.json();
+      newIpfsContent[seed.id] = data;
+      setIpfsContent(newIpfsContent);
+    }
     if (data?.plantoidInstance?.seeds?.length > 0) {
-      const newIpfsContent = { ...ipfsContent };
       for (let i = 0; i < data.plantoidInstance.seeds.length; i++) {
         const seed = data.plantoidInstance.seeds[i];
         // console.log(`RESOLVING SEED ${i}: `, seed);
         if (seed.revealed) {
           // console.log(`REVEALING SEED ${i}: `, seed);
           if (!newIpfsContent[seed.id]) {
-            await fetch(`${ipfsBase}${seed.uri.split("ipfs://")[1]}`)
-              .then(response => response.json())
-              .then(data => {
-                // console.log(`RESOLVE SEED ${i}: `, data)
-                newIpfsContent[seed.id] = data;
-              });
+            fetchData(seed);
           }
         }
       }
       // console.log({newIpfsContent})
-      setIpfsContent(newIpfsContent);
+      // setIpfsContent(newIpfsContent);
     }
-  }, [data]);
+  }, [data, ipfsContent]);
 
   console.log({ ipfsContent });
 

@@ -79,19 +79,12 @@ export default function Address(props) {
         {/* <Blockies seed={address.toLowerCase()} size={4} scale={props.fontSize ? props.fontSize / 7 : 4} /> */}
       </span>
       <span style={{ verticalAlign: "middle", paddingLeft: 5, fontSize: props.fontSize ? props.fontSize : 28 }}>
-       
-          <Text > 
-            {/* copyable={{ text: address }}> */}
-            <a
-              style={{ color: "gray" }}
-              target="_blank"
-              href={etherscanLink}
-              rel="noopener noreferrer"
-            >
-              {displayAddress}
-            </a>
-          </Text>
-      
+        <Text>
+          {/* copyable={{ text: address }}> */}
+          <a style={{ color: "gray" }} target="_blank" href={etherscanLink} rel="noopener noreferrer">
+            {displayAddress}
+          </a>
+        </Text>
       </span>
     </span>
   );
