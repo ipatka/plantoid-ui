@@ -4,7 +4,7 @@ export default function About() {
     return (
         
         <div style={{ border: "1px solid #cccccc", padding: 16, width: 800, margin: "auto", marginTop: 64 }}>
-          <h2>Plantoid #13</h2>
+          <h2>Plantoid #15</h2>
           <Divider />
        
         <table valign="top">
@@ -12,7 +12,7 @@ export default function About() {
           <Image style={{border: "1px solid ", marginLeft: "-50px" }}
             width={350}
             height={520}
-            src="https://ipfs.io/ipfs/QmRxsxzUEEHsp7QhoHwgDZZ79NTdZ5TH91r74z4cnSEcW6"
+            src="https://ipfs.io/ipfs/QmRcrcn4X6QfSwFnJQ1dNHn8YgW7pbmm6BjZn7t8FW7WFV"
           />
          </td>
 
