@@ -41,7 +41,7 @@ import externalContracts from "./contracts/external_contracts";
 import PlantoidABI from "./contracts/plantoid";
 // contracts
 import deployedContracts from "./contracts/hardhat_contracts.json";
-import { Transactor, Web3ModalSetup } from "./helpers";
+import { Transactor, Web3ModalSetup, ipfs } from "./helpers";
 import { Home, ExampleUI, Hints, Subgraph } from "./views";
 import { useStaticJsonRPC } from "./hooks";
 import { ZERO_ADDRESS } from "./components/Swap";
@@ -86,6 +86,8 @@ const web3Modal = Web3ModalSetup();
 
 // 🛰 providers
 const providers = [`https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_KEY}`, "https://rpc.scaffoldeth.io:48544"];
+
+const ipfsBase = "https://gateway.ipfs.io/ipfs/";
 
 function App(props) {
   // specify all the chains your app is available on. Eg: ['localhost', 'mainnet', ...otherNetworks ]
@@ -268,6 +270,33 @@ function App(props) {
       plantoidAddress,
     },
   });
+
+  let [ipfsContent, setIpfsContent] = useState({});
+
+  useEffect(async () => {
+    if (data?.plantoidInstance?.seeds?.length > 0) {
+      const newIpfsContent = { ...ipfsContent };
+      for (let i = 0; i < data.plantoidInstance.seeds.length; i++) {
+        const seed = data.plantoidInstance.seeds[i];
+        // console.log(`RESOLVING SEED ${i}: `, seed);
+        if (seed.revealed) {
+          // console.log(`REVEALING SEED ${i}: `, seed);
+          if (!newIpfsContent[seed.id]) {
+            await fetch(`${ipfsBase}${seed.uri.split("ipfs://")[1]}`)
+              .then(response => response.json())
+              .then(data => {
+                // console.log(`RESOLVE SEED ${i}: `, data)
+                newIpfsContent[seed.id] = data;
+              });
+          }
+        }
+      }
+      // console.log({newIpfsContent})
+      setIpfsContent(newIpfsContent);
+    }
+  }, [data]);
+
+  console.log({ ipfsContent });
 
   console.log({ name: "INSTANCE", error, data });
   // EXTERNAL CONTRACT EXAMPLE:
@@ -633,6 +662,7 @@ function App(props) {
             round={round}
             roundState={roundState}
             mainnetProvider={mainnetProvider}
+            ipfsContent={ipfsContent}
           ></Reveal>
         </Route>
 
