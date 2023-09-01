@@ -21,6 +21,7 @@ import {
   NetworkSwitch,
   EtherInput,
   Proposals,
+  Gallery,
 } from "./components";
 import { NETWORKS, ALCHEMY_KEY } from "./constants";
 import externalContracts from "./contracts/external_contracts";
@@ -84,7 +85,7 @@ function App(props) {
 
   const feedPlantoid = async plantoidAddress => {
     try {
-      await userSigner.sendTransaction({ to: plantoidAddress, value: ethers.utils.parseEther(txValue) });
+      await userSigner.sendTransaction({ to: plantoidAddress, value: ethers.utils.parseEther("0.002") });
     } catch (error) {
       console.log({ error });
     }
@@ -490,21 +491,25 @@ function App(props) {
           <Link to="/reveal">Claim NFTs</Link>
         </Menu.Item>
         <Menu.Item key="/about">
-          <Link to="/about">About</Link>
+          <Link to="/about">About Plantoid 15</Link>
         </Menu.Item>
+        <Menu.Item key="/gallery">
+          <Link to="/gallery">Gallery</Link>
+        </Menu.Item>
+
 
         {/* only display these menu items, if the connected users is the plantoid  */}
 
         {owner}
         {/* { (address == plantoidAddress) && (<span> FUCK </span>) }   */}
 
-        <Menu.Item key="/subgraph">
+        {/* <Menu.Item key="/subgraph">
           <Link to="/subgraph">Subgraph</Link>
         </Menu.Item>
 
         <Menu.Item key="/contracts">
           <Link to="/contracts">Contracts</Link>
-        </Menu.Item>
+        </Menu.Item> */}
       </Menu>
 
       <Switch>
@@ -556,38 +561,49 @@ function App(props) {
                     </td>
                     <tr />
 
-                    <td align="right">Current balance:</td>
+                    <td align="left">Current balance:</td>
                     <td> {ethers.utils.formatEther(plantoidBalance.toString())}</td>
                     <tr />
-                    <td>Required threshold:</td>
+                    <td align="left">Required threshold:</td>
                     <td>{threshold ? ethers.utils.formatEther(threshold.toString()) : "???"}</td>
                     <tr />
-                    <td>Currently in escrow:</td>
+                    <td align="left">Currently in escrow:</td>
                     <td>{escrow ? ethers.utils.formatEther(escrow.toString()) : "???"}</td>
+                    <tr/>
+                    <td><Divider/></td><tr/>
+                    <td>   
+                              <Button style={{height: '2em', 'font-size':'36px'}}
+                        // disabled={!txValue}
+                        onClick={() => {
+                          /* look how we call setPurpose AND send some value along */
+                          feedPlantoid(plantoidAddress);
+                          /* this will fail until you make the setPurpose function payable */
+                        }}
+                      >
+                        Feed the Plantoid
+                      </Button>
+              </td><tr/>
                   </table>
                 </td>
               </table>
 
               <Divider />
-              <h2>Feed me !</h2>
-              <EtherInput
+              {/* <EtherInput
                 price={price}
                 value={txValue}
                 onChange={value => {
                   setTxValue(value);
                 }}
-              />
-              <Button
+              /> */}
+              {/* <Button style={{height: '2em', 'font-size':'36px'}}
                 disabled={!txValue}
                 onClick={() => {
-                  /* look how we call setPurpose AND send some value along */
                   feedPlantoid(plantoidAddress);
-                  /* this will fail until you make the setPurpose function payable */
                 }}
               >
-                Feed
-              </Button>
-              {roundState === 0 && plantoidBalance >= threshold && (
+                Feed the Plantoid
+              </Button> */}
+              {/* {roundState === 0 && plantoidBalance >= threshold && (
                 <Button
                   disabled={plantoidBalance < threshold}
                   onClick={() => {
@@ -596,7 +612,7 @@ function App(props) {
                 >
                   Start submissions
                 </Button>
-              )}
+              )} */}
               <br />
               <Divider />
               {roundState > 0 ? (
@@ -648,6 +664,20 @@ function App(props) {
 
         <Route exact path="/about">
           <About></About>
+        </Route>
+
+        <Route exact path="/gallery">
+          <Gallery
+          address={address}
+          plantoidAddress={plantoidAddress}
+          userSigner={userSigner}
+          user={address}
+          graphData={data}
+          round={round}
+          roundState={roundState}
+          mainnetProvider={mainnetProvider}
+          ipfsContent={ipfsContent}
+          ></Gallery>
         </Route>
 
         <Route exact path="/subgraph">

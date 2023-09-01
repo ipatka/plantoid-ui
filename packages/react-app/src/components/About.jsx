@@ -3,7 +3,7 @@ import { Divider, Image } from "antd";
 export default function About() {
   return (
     <div style={{ border: "1px solid #cccccc", padding: 16, width: 800, margin: "auto", marginTop: 64 }}>
-      <h2>Plantoid #13</h2>
+      <h2>Plantoid #15</h2>
       <Divider />
 
       <table valign="top">
@@ -12,7 +12,7 @@ export default function About() {
             style={{ border: "1px solid ", marginLeft: "-50px" }}
             width={350}
             height={520}
-            src="https://ipfs.io/ipfs/QmRxsxzUEEHsp7QhoHwgDZZ79NTdZ5TH91r74z4cnSEcW6"
+            src="https://ipfs.io/ipfs/QmRcrcn4X6QfSwFnJQ1dNHn8YgW7pbmm6BjZn7t8FW7WFV"
           />
         </td>
 
@@ -55,12 +55,16 @@ export default function About() {
             (crypto-)property and enter into (smart-)contractual relationships, without the need to rely on any
             third-party (legal) entity.{" "}
           </span>
+          <Divider></Divider>
+          <span class="plantoid-text-cursive">
+            More information at <a href="https://plantoid.org">www.plantoid.org</a>
+          </span>
         </td>
       </table>
 
       <br />
       <span class="plantoid-text-cursive">
-        Plantoid #14 was born out of the contribution of many friends and colleagues, which I am deeply appreciative of.
+        Plantoid #15 was born out of the contribution of many friends and colleagues, which I am deeply appreciative of.
         <br />
         These include, in particular:
         <br />
