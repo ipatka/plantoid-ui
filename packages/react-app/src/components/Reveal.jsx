@@ -3,6 +3,7 @@ import { gql, useQuery } from "@apollo/client";
 
 import { Table, Button } from "antd";
 
+
 import PlantoidABI from "../contracts/plantoid";
 import { Address } from "../components";
 
@@ -67,6 +68,9 @@ export default function Reveal({
       render: record => (
         <div>
           <Button
+
+          style={{height: '2em', 'font-size':'36px'}}
+
             disabled={!record.revealedSignature || record.revealed}
             onClick={() => {
               const revealedUri = record.revealedUri;
@@ -87,9 +91,17 @@ export default function Reveal({
       render: record => (
         <div>
           <Button
+
+        style={{height: '2em', 'font-size':'36px'}}
+
             disabled={!record.revealed_uri}
             onClick={() => {
-              window.open(record.revealed_uri, "_blank");
+              // window.open(record.revealed_uri, "_blank");
+              window.open(record.revealed_uri, "theFrame");
+              // x = document.getElementById("modal");
+              // x.style.display = 'block';
+
+             // executeOnClick();
             }}
           >
             View
@@ -137,9 +149,16 @@ export default function Reveal({
         <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
           {/* {graphData && graphData.holder ? ( */}
           <br />
+
+          <div id="modal" >
+            {/* ref={ref} style={{display:'none'}}> */}
+            <iframe name="theFrame" id="ifram1" width="900" height="900">
+            </iframe>
+          </div>   
+
           Reveal your own NFTs
           <br />
-          <Table
+          <Table paginator rows={1}
             dataSource={_.sortBy(holderData, function (o) {
               return -Number(o.tokenId);
             })}
@@ -148,7 +167,7 @@ export default function Reveal({
           />
           {/* ) : ( */}
           <br />
-          Reveal other people's NFTs
+          {/* Reveal other people's NFTs
           <br />
           <Table
             dataSource={_.sortBy(remainData, function (o) {
@@ -156,7 +175,7 @@ export default function Reveal({
             })}
             columns={revealColumns}
             rowKey="id"
-          />
+          /> */}
           {/* )} */}
         </div>
       </div>
@@ -175,3 +194,7 @@ const revealMetadata = async (userSigner, tokenUri, tokenId, signature, plantoid
     console.log({ error });
   }
 };
+
+
+
+
