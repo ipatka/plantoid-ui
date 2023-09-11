@@ -242,7 +242,7 @@ function App(props) {
   `;
   const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
   const { error, data } = useQuery(EXAMPLE_GQL, {
-    pollInterval: 2500,
+    pollInterval: 20500,
     context: { apiName: "mainnet" },
     variables: {
       address: address ? address.toLowerCase() : ZERO_ADDRESS,

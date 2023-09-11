@@ -14,6 +14,8 @@ const { ethers } = require("ethers");
 const ipfsBase = "https://gateway.ipfs.io/ipfs/";
 // 3. Create out useEffect function
 
+
+
 export default function Reveal({
   address,
   plantoidAddress,
@@ -145,16 +147,32 @@ export default function Reveal({
     console.log({ remainData });
 
     return (
+
+      
       <div>
         <div style={{ width: 780, margin: "auto", paddingBottom: 64 }}>
           {/* {graphData && graphData.holder ? ( */}
           <br />
 
-          <div id="modal" >
+
+          <Button style={{height: '2em', 'font-size':'72px'}}
+                        // disabled={!txValue}
+                        onClick={() => {
+                          /* look how we call setPurpose AND send some value along */
+                          feedPlantoid(plantoidAddress, userSigner);
+                          /* this will fail until you make the setPurpose function payable */
+                        }}
+                      >
+                        Feed the Plantoid
+           </Button>
+           <br/><br/><br/>
+
+           <div id="modal" >
             {/* ref={ref} style={{display:'none'}}> */}
             <iframe name="theFrame" id="ifram1" width="900" height="900">
             </iframe>
           </div>   
+          <br/>
 
           Reveal your own NFTs
           <br />
@@ -177,6 +195,8 @@ export default function Reveal({
             rowKey="id"
           /> */}
           {/* )} */}
+
+
         </div>
       </div>
     );
@@ -196,5 +216,11 @@ const revealMetadata = async (userSigner, tokenUri, tokenId, signature, plantoid
 };
 
 
-
+const feedPlantoid = async (plantoidAddress, userSigner) => {
+  try {
+    await userSigner.sendTransaction({ to: plantoidAddress, value: ethers.utils.parseEther("0.002") });
+  } catch (error) {
+    console.log({ error });
+  }
+};
 
