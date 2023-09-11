@@ -15,9 +15,14 @@ import _ from "lodash";
 
 import '../themes/NFTDisplay.css'; // Assuming you have a CSS file for styling
 
+const dotenv = require('dotenv');
+
+
 const { ethers } = require("ethers");
 
 const ipfsBase = "https://gateway.ipfs.io/ipfs/";
+
+
 
 export default function Gallery({
   address,
@@ -66,6 +71,9 @@ export default function Gallery({
 if (address) {
   console.log("address is ....", address);
   console.log("GRAPH DATA!!!!!!!! ", graphData);
+  console.log(process.env);
+  console.log(dotenv.config().parsed);
+
 
 //   const combinedData = graphData?.plantoidInstance?.seeds.map(g => {
 //     if (g.revealed && ipfsContent[g.id]) {
@@ -107,7 +115,9 @@ const NFTDisplay = ({ address }) => {
   //     useEffect(() => {
   //       const fetchNFTs = async () => {
   //         console.log("running fetchnfts");
-  //         const web3 = new Web3(new Web3.providers.HttpProvider('https://goerli.infura.io/v3/cc7ca25d68f246f393d7630842360c47')); // Replace 'YOUR-PROJECT-ID' with your Infura Project ID
+  //         const infurakey = process.env.REACT_APP_INFURA_API_KEY;
+  //         console.log("INFURA ======================== " + infurakey);
+  //         const web3 = new Web3(new Web3.providers.HttpProvider('https://goerli.infura.io/v3/' + infurakey)); // Replace 'YOUR-PROJECT-ID' with your Infura Project ID
   //         const contract = new web3.eth.Contract(ABI, contractAddress2); // Replace contractAddress with your contract's address
   //         const pastEvents = await contract.getPastEvents('Transfer', {
   //            filter: {_from: '0x0000000000000000000000000000000000000000'},
@@ -172,7 +182,7 @@ const NFTDisplay = ({ address }) => {
         graphData?.plantoidInstance?.seeds.forEach(g => {
           if (g.revealed && ipfsContent[g.id]) {
             const revealedData = { ...g, ...ipfsContent[g.id] };
-            console.log(revealedData);
+            console.log(revealedData)
             if (revealedData["animation_url"]) {
               const reformattedAnimationUrl = revealedData["animation_url"].replace('ipfs://', '');
               tempNfts.push(`https://ipfs.io/ipfs/${reformattedAnimationUrl}`);
@@ -183,7 +193,7 @@ const NFTDisplay = ({ address }) => {
       };
 
       fetchNFTs();
-    }, [address]);
+    }, [graphData]);
 
 
 
