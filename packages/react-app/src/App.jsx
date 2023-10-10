@@ -225,7 +225,7 @@ function App(props) {
     plantoidInstance(id: $plantoidAddress) {
       id
       oracle
-      seeds {
+      seeds(first: 1000) {
         id
         holder {
           address
@@ -250,6 +250,8 @@ function App(props) {
       plantoidAddress,
     },
   });
+  
+  console.log({data})
 
   let [ipfsContent, setIpfsContent] = useState({});
 
