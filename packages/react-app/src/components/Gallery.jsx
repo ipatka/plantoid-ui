@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 
-
 import _ from "lodash";
 
-// import '../themes/NFTDisplay.css'; // Assuming you have a CSS file for styling
+import '../themes/NFTDisplay.css'; // Assuming you have a CSS file for styling
 
 const dotenv = require("dotenv");
 
@@ -73,10 +72,12 @@ export default function Gallery({
           console.log(revealedData);
           if (revealedData["animation_url"]) {
             const reformattedAnimationUrl = revealedData["animation_url"].replace("ipfs://", "");
-            tempNfts.push(`https://ipfs.io/ipfs/${reformattedAnimationUrl}`);
+           // tempNfts.push(`https://ipfs.io/ipfs/${reformattedAnimationUrl}`);
+              tempNfts.push([ revealedData["tokenId"],`https://ipfs.io/ipfs/${reformattedAnimationUrl}` ]);
           }
         }
       });
+
       setNfts(tempNfts);
     };
 
@@ -88,12 +89,32 @@ export default function Gallery({
       <h1 className="gallery-title">Welcome to the gallery of Plantoid 15</h1>
       <p className="gallery-description">Here you can see all of its digital NFT seeds</p>
       <div className="nft-gallery">
-        {nfts.map((nft, index) => (
+          {/* { [].concat(nfts)
+          .sort((a, b) => a[0] > b[0] ? 1 : - 1)
+          .map((nft, index) => (
+
           <div key={index} className="image-container">
-            <video src={nft} alt="NFT" className="image" controls loop />
-            <p>Seed #{index + 1}</p>
+            <video src={nft[1]} alt="NFT" className="image" controls loop />
+            <p>Seed #{nft[0]}</p>
+          </div>
+        ))} */}
+
+
+        {nfts.sort((a, b) => parseInt(a[0]) > parseInt(b[0]) ? -1 : 1).map((nft, index) => (
+          <div key={index} className="image-container">
+            <video src={nft[1]} alt="NFT" className="image" controls loop />
+            <p>Seed #{nft[0]}</p>
           </div>
         ))}
+
+        {/* {nfts.map((nft, index) => (
+          <div key={index} className="image-container">
+            <video src={nft[1]} alt="NFT" className="image" controls loop />
+            <p>Seed #{nft[0]}</p>
+          </div>
+        ))} */}
+
+
       </div>
     </div>
   );
