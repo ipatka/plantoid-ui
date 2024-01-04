@@ -188,7 +188,7 @@ function App(props) {
   };
 
 
-  const [ plantoidAddress, setPlantoidAddress] = useState(Plantoids["goerli"]);
+  const [ plantoidAddress, setPlantoidAddress] = useState(Plantoids["mainnet"]);
 
 
 
