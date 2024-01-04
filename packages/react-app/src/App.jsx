@@ -163,6 +163,7 @@ function App(props) {
   // const contractConfig = useContractConfig();
 
   const contractConfig = { deployedContracts: deployedContracts || {}, externalContracts: externalContracts || {} };
+  console.log("contract config");
   console.log({ contractConfig });
 
   // Load in your local 📝 contract and read a value from it:
@@ -238,7 +239,7 @@ function App(props) {
     plantoidInstance(id: $plantoidAddress) {
       id
       oracle
-      seeds {
+      seeds(first: 1000) {
         id
         holder {
           address
@@ -256,7 +257,8 @@ function App(props) {
   const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
   const { error, data, refetch } = useQuery(EXAMPLE_GQL, {
     pollInterval: 20500,
-    context: { apiName: "mainnet" },
+    // context: { apiName: "goerli" },
+    context: { apiName: selectedNetwork },
     variables: {
       address: address ? address.toLowerCase() : ZERO_ADDRESS,
       roundId: round ? plantoidAddress + "_0x" + round : 0,
@@ -477,7 +479,7 @@ function App(props) {
             <Account
               // useBurner={USE_BURNER_WALLET}
               address={address}
-              // localProvider={localProvider}
+             // localProvider={localProvider}
               userSigner={userSigner}
               mainnetProvider={mainnetProvider}
               price={price}

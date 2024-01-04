@@ -5123,7 +5123,7 @@
       "chainId": "5",
       "contracts": {
         "Plantoid": {
-          "address": "0x580fDc17a820e3c0D17fbcd1137483C5332FCeb6",
+          "address": "0x0B60EE161d7b67fa231e9565dAFF65b34553bC6F",
           "abi": [
             {
               "inputs": [],
@@ -7036,7 +7036,7 @@
           ]
         },
         "PlantoidSpawn": {
-          "address": "0xef0Dae31395821633B1E0DfEab4B0f6AF358cDB1",
+          "address": "0xD6A57C7665D3860e00e9Fded4D0666cAF2263262",
           "abi": [
             {
               "inputs": [

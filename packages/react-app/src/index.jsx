@@ -19,6 +19,7 @@ const client = new ApolloClient({
       endpoints: {
         metadata: `https://api.thegraph.com/subgraphs/name/ipatka/plantoid-polygon`,
         mainnet: `https://api.thegraph.com/subgraphs/name/ipatka/plantoid-mainnet-v2`,
+        goerli: `https://api.thegraph.com/subgraphs/name/yaoe/plantoid-14-goerli`,
       },
       // defaultEndpoint: 'https://api.thegraph.com/subgraphs/name/ipatka/daostar',
       httpSuffix: "",
