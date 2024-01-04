@@ -45,7 +45,13 @@ export default function Reveal({
     },
   });
 
+  
+
+
+
+  console.log("......................................................................................")
   console.log({ loading, error, data });
+  console.log({graphData});
 
   const revealColumns = [
     {
@@ -101,7 +107,10 @@ export default function Reveal({
 
   console.log({ graphData });
   if (address) {
-    console.log("GRAPH DATA!!!!!!!! ", graphData);
+    console.log("GRAPH DATA (reveal) !!!!!!!! ", graphData);
+    console.log("with plantoid address = ", plantoidAddress);
+
+
     const combinedData = graphData?.plantoidInstance?.seeds.map(g => {
       if (g.revealed && ipfsContent[g.id]) {
         const revealedData = { ...g, ...ipfsContent[g.id] };

@@ -55,12 +55,16 @@ export default function About() {
             (crypto-)property and enter into (smart-)contractual relationships, without the need to rely on any
             third-party (legal) entity.{" "}
           </span>
+          <Divider></Divider>
+          <span class="plantoid-text-cursive">
+            More information at <a href="https://plantoid.org">www.plantoid.org</a>
+          </span>
         </td>
       </table>
 
       <br />
       <span class="plantoid-text-cursive">
-        Plantoid #14 was born out of the contribution of many friends and colleagues, which I am deeply appreciative of.
+        Plantoid #15 was born out of the contribution of many friends and colleagues, which I am deeply appreciative of.
         <br />
         These include, in particular:
         <br />

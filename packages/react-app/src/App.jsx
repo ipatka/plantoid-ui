@@ -21,6 +21,7 @@ import {
   NetworkSwitch,
   EtherInput,
   Proposals,
+  Gallery,
 } from "./components";
 import { NETWORKS, ALCHEMY_KEY } from "./constants";
 import externalContracts from "./contracts/external_contracts";
@@ -61,7 +62,7 @@ const initialNetwork = NETWORKS.mainnet; // <------- select your target frontend
 // 😬 Sorry for all the console logging
 const DEBUG = true;
 const USE_BURNER_WALLET = true; // toggle burner wallet feature
-const USE_NETWORK_SELECTOR = false;
+const USE_NETWORK_SELECTOR = true;
 
 const web3Modal = Web3ModalSetup();
 
@@ -73,7 +74,7 @@ const ipfsBase = "https://gateway.ipfs.io/ipfs/";
 function App(props) {
   // specify all the chains your app is available on. Eg: ['localhost', 'mainnet', ...otherNetworks ]
   // reference './constants.js' for other networks
-  const networkOptions = [initialNetwork.name, "mainnet", "rinkeby"];
+  const networkOptions = [initialNetwork.name, "goerli"];
 
   const [injectedProvider, setInjectedProvider] = useState();
   const [address, setAddress] = useState();
@@ -178,7 +179,20 @@ function App(props) {
   // const plantoidAddress = "0x6EfCB0349CCA3d60763646B0df19EfdC7Ebfa85E".toLowerCase();
   // const plantoidAddress = "0xF8F838dC69D59eA02EE0e25d7F0E982a6248f58d".toLowerCase();
   //const plantoidAddress = "0x6949bc5Fb1936407bEDd9F3757DA62147741f2A1".toLowerCase();
-  const plantoidAddress = "0x4073E38f71b2612580E9e381031B0c38B3B4C27E".toLowerCase();
+  // const plantoidAddress = "0x4073E38f71b2612580E9e381031B0c38B3B4C27E".toLowerCase();  // default is mainnet
+  
+  
+  const Plantoids = {
+    "mainnet" : "0x4073E38f71b2612580E9e381031B0c38B3B4C27E".toLowerCase(),
+    "goerli"  : "0x0b60ee161d7b67fa231e9565daff65b34553bc6f".toLowerCase(),
+  };
+
+
+  const [ plantoidAddress, setPlantoidAddress] = useState(Plantoids["goerli"]);
+
+
+
+
 
   const EXAMPLE_GRAPHQL = `query getPlantoid($address: String, $roundId: String, $plantoidAddress: String) @api(contextKey: "apiName")
   {
@@ -240,8 +254,8 @@ function App(props) {
   }
   `;
   const EXAMPLE_GQL = gql(EXAMPLE_GRAPHQL);
-  const { error, data } = useQuery(EXAMPLE_GQL, {
-    pollInterval: 2500,
+  const { error, data, refetch } = useQuery(EXAMPLE_GQL, {
+    pollInterval: 20500,
     context: { apiName: "mainnet" },
     variables: {
       address: address ? address.toLowerCase() : ZERO_ADDRESS,
@@ -420,19 +434,43 @@ function App(props) {
   
   }`;
 
+  const handleNetworkSwitch = (i) => {
+    console.log("********************************************************************************************************************************************************************************************************************************************************************************************************************");
+    
+    setSelectedNetwork(i);
+    setPlantoidAddress(Plantoids[i]);
+
+    var newaddr = Plantoids[i];
+
+    const {data} = refetch(   
+    {
+      address: address ? address.toLowerCase() : ZERO_ADDRESS,
+      roundId: round ? newaddr + "_0x" + round : 0,
+      newaddr,
+    });
+
+    
+
+    console.log("DATATATATTATATATATTATATATATTATATATATATAT: ", plantoidAddress);
+    console.log(data);  
+  
+  }
+
+
   return (
     <div className="App">
       {/* ✏️ Edit the header and change the title to your project name */}
       <Header title="🥀 Plantoid" link="http://plantoid.org" subTitle="a blockchain-based life-form">
+
         {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
         <div style={{ position: "relative", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", flex: 1 }}>
             {USE_NETWORK_SELECTOR && (
-              <div style={{ marginRight: 20 }}>
+              <div style={{ marginRight: 20 }}> 
                 <NetworkSwitch
                   networkOptions={networkOptions}
                   selectedNetwork={selectedNetwork}
-                  setSelectedNetwork={setSelectedNetwork}
+                  setSelectedNetwork={handleNetworkSwitch}
                 />
               </div>
             )}
@@ -474,7 +512,7 @@ function App(props) {
         You are the lucky owner of{" "}
         <span class="balivia">
           {" "}
-          {data?.holder?.seeds.filter(s => s.plantoid.id === plantoidAddress).length || 0}{" "}
+          {data?.holder?.seeds.filter(s => s.plantoid.id === plantoidAddress).length || "???" }{" "}
         </span>{" "}
         Plantoid seeds.
         <br></br>
@@ -492,19 +530,22 @@ function App(props) {
         <Menu.Item key="/about">
           <Link to="/about">About</Link>
         </Menu.Item>
+        <Menu.Item key="/gallery">
+          <Link to="/gallery">Gallery</Link>
+        </Menu.Item>
 
         {/* only display these menu items, if the connected users is the plantoid  */}
 
         {owner}
         {/* { (address == plantoidAddress) && (<span> FUCK </span>) }   */}
 
-        <Menu.Item key="/subgraph">
+        {/* <Menu.Item key="/subgraph">
           <Link to="/subgraph">Subgraph</Link>
         </Menu.Item>
 
         <Menu.Item key="/contracts">
           <Link to="/contracts">Contracts</Link>
-        </Menu.Item>
+        </Menu.Item> */}
       </Menu>
 
       <Switch>
@@ -649,6 +690,23 @@ function App(props) {
         <Route exact path="/about">
           <About></About>
         </Route>
+
+
+        <Route exact path="/gallery">
+          <Gallery
+          address={address}
+          plantoidAddress={plantoidAddress}
+          userSigner={userSigner}
+          user={address}
+          graphData={data}
+          round={round}
+          roundState={roundState}
+          mainnetProvider={mainnetProvider}
+          ipfsContent={ipfsContent}
+          ></Gallery>
+        </Route>
+
+
 
         <Route exact path="/subgraph">
           {/*
