@@ -67,8 +67,10 @@
       "**/hardhat-ts/**"
     ]
   },
-  "dependencies": {},
   "devDependencies": {
     "husky": "^7.0.2"
+  },
+  "dependencies": {
+    "react-infinite-scroll-component": "^6.1.0"
   }
 }
