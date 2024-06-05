@@ -11,6 +11,10 @@ contract Deploy is Script {
     function run() public {
     vm.startBroadcast();
     
+    if (msg.sender != 0x1f028f240A90414211425bFa38eB4917Cb32c39C) {
+        revert("only owner can deploy");
+    }
+    
     Plantoid template = new Plantoid();
     
     new PlantoidSpawn(payable(address(template)));

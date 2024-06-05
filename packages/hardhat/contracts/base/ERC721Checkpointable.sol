@@ -34,10 +34,14 @@
 
 pragma solidity ^0.8.6;
 
-import './ERC721Enumerable.sol';
-
+import "./ERC721Enumerable.sol";
 
 abstract contract ERC721Checkpointable is ERC721Enumerable {
+    error ERC721CheckpointableDelegateBySigInvalidSignature();
+    error ERC721CheckpointableDelegateBySigInvalidNonce();
+    error ERC721CheckpointableDelegateBySigSignatureExpired();
+    error ERC721CheckpointableGetPriorVotesNotYetDetermined();
+
     /// @notice Defines decimals as per ERC-20 convention to make integrations with 3rd party governance platforms easier
     uint8 public constant decimals = 0;
 
@@ -58,27 +62,41 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
 
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH =
-        keccak256('EIP712Domain(string name,uint256 chainId,address verifyingContract)');
+        keccak256(
+            "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
+        );
 
     /// @notice The EIP-712 typehash for the delegation struct used by the contract
     bytes32 public constant DELEGATION_TYPEHASH =
-        keccak256('Delegation(address delegatee,uint256 nonce,uint256 expiry)');
+        keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
     /// @notice A record of states for signing / validating signatures
     mapping(address => uint256) public nonces;
 
     /// @notice An event thats emitted when an account changes its delegate
-    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+    event DelegateChanged(
+        address indexed delegator,
+        address indexed fromDelegate,
+        address indexed toDelegate
+    );
 
     /// @notice An event thats emitted when a delegate account's vote balance changes
-    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
+    event DelegateVotesChanged(
+        address indexed delegate,
+        uint256 previousBalance,
+        uint256 newBalance
+    );
 
     /**
      * @notice The votes a delegator can delegate, which is the current balance of the delegator.
      * @dev Used when calling `_delegate()`
      */
     function votesToDelegate(address delegator) public view returns (uint96) {
-        return safe96(balanceOf(delegator), 'ERC721Checkpointable::votesToDelegate: amount exceeds 96 bits');
+        return
+            safe96(
+                balanceOf(delegator),
+                "ERC721Checkpointable::votesToDelegate: amount exceeds 96 bits"
+            );
     }
 
     /**
@@ -133,14 +151,29 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         bytes32 s
     ) public {
         bytes32 domainSeparator = keccak256(
-            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name())), getChainId(), address(this))
+            abi.encode(
+                DOMAIN_TYPEHASH,
+                keccak256(bytes(name())),
+                getChainId(),
+                address(this)
+            )
         );
-        bytes32 structHash = keccak256(abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry));
-        bytes32 digest = keccak256(abi.encodePacked('\x19\x01', domainSeparator, structHash));
+        bytes32 structHash = keccak256(
+            abi.encode(DELEGATION_TYPEHASH, delegatee, nonce, expiry)
+        );
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", domainSeparator, structHash)
+        );
         address signatory = ecrecover(digest, v, r, s);
-        require(signatory != address(0), 'ERC721Checkpointable::delegateBySig: invalid signature');
-        require(nonce == nonces[signatory]++, 'ERC721Checkpointable::delegateBySig: invalid nonce');
-        require(block.timestamp <= expiry, 'ERC721Checkpointable::delegateBySig: signature expired');
+        if (signatory == address(0)) {
+            revert ERC721CheckpointableDelegateBySigInvalidSignature();
+        }
+        if (nonce != nonces[signatory]++) {
+            revert ERC721CheckpointableDelegateBySigInvalidNonce();
+        }
+        if (block.timestamp > expiry) {
+            revert ERC721CheckpointableDelegateBySigSignatureExpired();
+        }
         return _delegate(signatory, delegatee);
     }
 
@@ -151,7 +184,8 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
      */
     function getCurrentVotes(address account) external view returns (uint96) {
         uint32 nCheckpoints = numCheckpoints[account];
-        return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
+        return
+            nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
     }
 
     /**
@@ -161,9 +195,14 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
      * @param blockNumber The block number to get the vote balance at
      * @return The number of votes the account had as of the given block
      */
-    function getPriorVotes(address account, uint256 blockNumber) public view returns (uint96) {
+    function getPriorVotes(
+        address account,
+        uint256 blockNumber
+    ) public view returns (uint96) {
         // revert LogThis(blockNumber, block.number);
-        require(blockNumber < block.number, 'ERC721Checkpointable::getPriorVotes: not yet determined');
+        if (blockNumber >= block.number) {
+            revert ERC721CheckpointableGetPriorVotesNotYetDetermined();
+        }
 
         uint32 nCheckpoints = numCheckpoints[account];
         if (nCheckpoints == 0) {
@@ -217,15 +256,27 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
         if (srcRep != dstRep && amount > 0) {
             if (srcRep != address(0)) {
                 uint32 srcRepNum = numCheckpoints[srcRep];
-                uint96 srcRepOld = srcRepNum > 0 ? checkpoints[srcRep][srcRepNum - 1].votes : 0;
-                uint96 srcRepNew = sub96(srcRepOld, amount, 'ERC721Checkpointable::_moveDelegates: amount underflows');
+                uint96 srcRepOld = srcRepNum > 0
+                    ? checkpoints[srcRep][srcRepNum - 1].votes
+                    : 0;
+                uint96 srcRepNew = sub96(
+                    srcRepOld,
+                    amount,
+                    "ERC721Checkpointable::_moveDelegates: amount underflows"
+                );
                 _writeCheckpoint(srcRep, srcRepNum, srcRepOld, srcRepNew);
             }
 
             if (dstRep != address(0)) {
                 uint32 dstRepNum = numCheckpoints[dstRep];
-                uint96 dstRepOld = dstRepNum > 0 ? checkpoints[dstRep][dstRepNum - 1].votes : 0;
-                uint96 dstRepNew = add96(dstRepOld, amount, 'ERC721Checkpointable::_moveDelegates: amount overflows');
+                uint96 dstRepOld = dstRepNum > 0
+                    ? checkpoints[dstRep][dstRepNum - 1].votes
+                    : 0;
+                uint96 dstRepNew = add96(
+                    dstRepOld,
+                    amount,
+                    "ERC721Checkpointable::_moveDelegates: amount overflows"
+                );
                 _writeCheckpoint(dstRep, dstRepNum, dstRepOld, dstRepNew);
             }
         }
@@ -239,26 +290,38 @@ abstract contract ERC721Checkpointable is ERC721Enumerable {
     ) internal {
         uint32 blockNumber = safe32(
             block.number,
-            'ERC721Checkpointable::_writeCheckpoint: block number exceeds 32 bits'
+            "ERC721Checkpointable::_writeCheckpoint: block number exceeds 32 bits"
         );
 
-        if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
+        if (
+            nCheckpoints > 0 &&
+            checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber
+        ) {
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
         } else {
-            checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
+            checkpoints[delegatee][nCheckpoints] = Checkpoint(
+                blockNumber,
+                newVotes
+            );
             numCheckpoints[delegatee] = nCheckpoints + 1;
         }
 
         emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
 
-    function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
-        require(n < 2**32, errorMessage);
+    function safe32(
+        uint256 n,
+        string memory errorMessage
+    ) internal pure returns (uint32) {
+        require(n < 2 ** 32, errorMessage);
         return uint32(n);
     }
 
-    function safe96(uint256 n, string memory errorMessage) internal pure returns (uint96) {
-        require(n < 2**96, errorMessage);
+    function safe96(
+        uint256 n,
+        string memory errorMessage
+    ) internal pure returns (uint96) {
+        require(n < 2 ** 96, errorMessage);
         return uint96(n);
     }
 
