@@ -1,0 +1,12 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["lib"]
+solc = "0.8.16" # to use a specific local solc install set the path as `solc = "<path to solc>/solc"`
+optimizer = true
+optimizer_runs = 100000
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[etherscan]
+sepolia = { key = "${ETHERSCAN_SEPOLIA_KEY}" }
