@@ -19,45 +19,31 @@ contract Deploy is Script {
         vm.startBroadcast();
 
         address plantoidOracleAddress = 0x7e6ce11beE2AB7F84eF0D1955CE1F546D897aB98;
-        address payable artistAddress = payable(
-            0x2D3C242d2C074D523112093C67d1c01Bb27ca40D
-        );
+        address payable artistAddress = payable(0x2D3C242d2C074D523112093C67d1c01Bb27ca40D);
         address payable parentAddress = payable(address(0));
-        uint256 depositThreshold = 0.001 ether;
-        uint256 threshold = 5 ether;
-        string memory name = "Plantoid 13";
-        string
-            memory prereveal = "ipfs://QmXTzn3ZMvsYnfJKXcKQ2PVHH2YNbdUDED1GM2DEuMHmzH";
-        string memory symbol = "PLANTOID";
+
+        uint256 depositThreshold = block.chainid == 1 ? 0.01 ether : 0.001 ether;
+        uint256 threshold = block.chainid == 1 ? 2 ether : 2 ether;
+
+        string memory name = "Plantoid 18";
+        string memory prereveal = "ipfs://bafkreibsh27faljq7dpyzihfzjbx25zgb24bfew5fypdqvqqellxshacsy";
+        string memory symbol = "PLANTOID-18";
+
+
         uint256 proposalPeriod = 1209600; // 2 weeks
         uint256 votingPeriod = 604800;
         uint256 gracePeriod = 604800;
 
-        bytes memory thresholdsAndPeriods = abi.encode(
-            depositThreshold,
-            threshold,
-            proposalPeriod,
-            votingPeriod,
-            gracePeriod
-        );
+        bytes memory thresholdsAndPeriods =
+            abi.encode(depositThreshold, threshold, proposalPeriod, votingPeriod, gracePeriod);
         bytes memory initAction = abi.encodeCall(
             Plantoid.init,
-            (
-                plantoidOracleAddress,
-                artistAddress,
-                parentAddress,
-                name,
-                symbol,
-                prereveal,
-                thresholdsAndPeriods
-            )
+            (plantoidOracleAddress, artistAddress, parentAddress, name, symbol, prereveal, thresholdsAndPeriods)
         );
 
         bytes32 salt = keccak256(abi.encodePacked("salt", block.number));
 
-        PlantoidSpawn spawner = PlantoidSpawn(
-            payable(address(plantoidSpawnAddress))
-        );
+        PlantoidSpawn spawner = PlantoidSpawn(payable(address(plantoidSpawnAddress)));
         spawner.spawnPlantoid(salt, initAction);
 
         vm.stopBroadcast();
